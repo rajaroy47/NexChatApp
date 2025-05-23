@@ -1,71 +1,67 @@
 body {
-    font-family: Arial, sans-serif;
-    background: #333334;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-  }
-  
-  #chat-container {
-    background: rgb(133, 126, 126);
-    width: 90%;
-    max-width: 500px;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 0 10px #aaa;
-  }
-  
-  h1 {
-    text-align: center;
-    color: #333;
-  }
-  
-  #messages {
-    height: 300px;
-    overflow-y: auto;
-    border: 1px solid #ddd;
-    padding: 10px;
-    margin-bottom: 10px;
-    border-radius: 5px;
-    background-color: #544e4e;
-  }
-  
-  .message {
-    margin-bottom: 10px;
-  }
-  
-  .username {
-    font-weight: bold;
-    color: #3366cc;
-  }
-  
-  .timestamp {
-    float: right;
-    font-size: 0.8em;
-    color: #888;
-  }
-  
-  input[type="text"] {
-    width: calc(50% - 5px);
-    padding: 10px;
-    margin: 5px 0;
-    border-radius: 5px;
-    border: 1px solid #ccc;
-  }
-  
-  button {
-    width: 100%;
-    padding: 10px;
-    background-color: #3366cc;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    font-weight: bold;
-    cursor: pointer;
-  }
-  
-  button:hover {
-    background-color: #254e9e;
-  }
-  
+  font-family: Arial, sans-serif;
+  background: #333334;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  flex-direction: column;
+}
+
+#chat-container, #auth-container {
+  background: rgb(133, 126, 126);
+  width: 90%;
+  max-width: 500px;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 0 10px #aaa;
+}
+
+#messages {
+  height: 300px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  background-color: #544e4e;
+}
+
+.message {
+  margin-bottom: 10px;
+}
+
+.username {
+  font-weight: bold;
+  color: #3366cc;
+}
+
+.timestamp {
+  float: right;
+  font-size: 0.8em;
+  color: #888;
+}
+
+input[type="text"], input[type="email"], input[type="password"] {
+  width: 100%;
+  padding: 10px;
+  margin: 5px 0;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+button {
+  width: 100%;
+  padding: 10px;
+  background-color: #3366cc;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 5px;
+}
+
+button:hover {
+  background-color: #254e9e;
+}
