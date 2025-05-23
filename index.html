@@ -1,38 +1,44 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>NexChat - Private Chat</title>
+  <title>NexChat - Login</title>
   <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 </head>
 <body>
+  
+  <!-- Auth Section -->
   <div id="auth-container">
     <h2>NexChat Login</h2>
-    <input type="email" id="email" placeholder="Email" />
-    <input type="password" id="password" placeholder="Password" />
-    <button onclick="login()">Login</button>
-    <button onclick="signup()">Sign Up</button>
+    <div class="myinput">
+      <input type="email" id="email" placeholder="Email" class="ip" autocomplete="username" />
+      <input type="password" id="password" placeholder="Password" class="ip" autocomplete="current-password" />
+    </div>
+    <button type="button" onclick="login(event)">Login</button>
+    <button type="button" onclick="signup(event)">Sign Up</button>
   </div>
 
+  <!-- Chat Section -->
   <div id="chat-container" style="display:none;">
-    <header>
-      <h1>NexChat</h1>
-      <button onclick="logout()">Logout</button>
-    </header>
-
-    <div id="app-body">
-      <aside id="user-list-container">
-        <h3>Users</h3>
-        <ul id="user-list"></ul>
-      </aside>
-
-      <main id="chat-area">
-        <div id="chat-header">Select a user to chat</div>
-        <div id="messages"></div>
-        <input type="text" id="messageInput" placeholder="Type your message..." disabled />
-        <button onclick="sendMessage()" id="sendBtn" disabled>Send</button>
-      </main>
+    <h1>NexChat</h1>
+    
+    <!-- Profile Info -->
+    <div id="profile-section">
+      <!-- Letter avatar shown here -->
+      <span id="userLetterAvatar" class="letter-avatar" aria-label="User avatar"></span>
+      <div>
+        <span id="userEmail" aria-live="polite"></span><br />
+        <small id="userStatus" style="color:gray; font-style:italic;" aria-live="polite"></small>
+      </div>
     </div>
+
+    <div id="online-users" class="online-users" aria-live="polite" role="region" aria-label="Online users list"></div>
+    <div id="messages" aria-live="polite" role="log" aria-relevant="additions"></div>
+    
+    <input type="text" id="messageInput" class="ip" placeholder="Type your message..." autocomplete="off" />
+    <button type="button" onclick="sendMessage()">Send</button>
+    <button type="button" onclick="logout()">Logout</button>
   </div>
 
   <script type="module" src="script.js"></script>

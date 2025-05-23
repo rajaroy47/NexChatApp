@@ -1,12 +1,14 @@
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import {
-  getDatabase, ref, push, onChildAdded, set, onValue, remove, onDisconnect, get
+  getDatabase, ref, push, onChildAdded, set, onValue, onDisconnect, get, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 import {
   getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
   onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
+// Your Firebase config object
 const firebaseConfig = {
   apiKey: "AIzaSyBblpZdFi8E3Lcf-4yEoJ3yhUonWmgpgyc",
   authDomain: "nexchat-8c980.firebaseapp.com",
@@ -17,182 +19,221 @@ const firebaseConfig = {
   databaseURL: "https://nexchat-8c980-default-rtdb.firebaseio.com"
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const auth = getAuth(app);
 
 let currentUser = null;
-let selectedUser = null;
+let usersCache = {};
 
+// Update user online status in DB
 function updateOnlineStatus(uid, isOnline) {
-  const userStatusRef = ref(db, "status/" + uid);
-  const userInfo = {
+  const statusRef = ref(db, `status/${uid}`);
+  const statusData = {
     email: currentUser.email,
     state: isOnline ? "online" : "offline",
-    lastChanged: Date.now()
+    lastChanged: serverTimestamp()
   };
+  set(statusRef, statusData);
 
-  set(userStatusRef, userInfo);
   if (isOnline) {
-    onDisconnect(userStatusRef).set({
+    // On disconnect set user offline automatically
+    onDisconnect(statusRef).set({
       email: currentUser.email,
       state: "offline",
-      lastChanged: Date.now()
+      lastChanged: serverTimestamp()
     });
   }
 }
 
-function loadUsers() {
+// Show online users with status and last seen
+function trackOnlineUsers() {
+  const statusRef = ref(db, "status");
+  onValue(statusRef, (snapshot) => {
+    const data = snapshot.val() || {};
+    const list = Object.entries(data).map(([uid, info]) => {
+      const isSelf = uid === currentUser.uid;
+      const label = isSelf ? " (You)" : "";
+      const status = info.state === "online" 
+        ? `<span class="online-status">🟢 Online</span>` 
+        : `<span class="offline-status">🔴 Offline (last seen ${timeAgo(info.lastChanged)})</span>`;
+      return `${info.email}${label} - ${status}`;
+    });
+    // Use innerHTML and <br> for line breaks
+    document.getElementById("online-users").innerHTML = list.join("<br>");
+  });
+}
+
+
+
+function timeAgo(timestamp) {
+  if (!timestamp) return "";
+  const timeNum = Number(timestamp);
+  if (isNaN(timeNum)) return "";
+
+  const diff = Math.floor((Date.now() - timeNum) / 1000);
+  if (diff < 60) return diff + "s ago";
+  const m = Math.floor(diff / 60);
+  if (m < 60) return m + "m ago";
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + "h ago";
+  return Math.floor(h / 24) + "d ago";
+}
+
+
+// Load all users into cache
+function loadUsersCache() {
   const usersRef = ref(db, "users");
-  onValue(usersRef, (snapshot) => {
-    const users = snapshot.val() || {};
-    const userList = document.getElementById("user-list");
-    userList.innerHTML = "";
-
-    Object.entries(users).forEach(([uid, user]) => {
-      if (uid === currentUser.uid) return; // don't show yourself in the list
-
-      const li = document.createElement("li");
-      li.textContent = user.email;
-
-      const statusDot = document.createElement("span");
-      statusDot.classList.add("status-dot");
-      // Check status
-      const statusRef = ref(db, "status/" + uid);
-      onValue(statusRef, (snap) => {
-        const data = snap.val();
-        if (data && data.state === "online") {
-          statusDot.classList.add("status-online");
-          statusDot.classList.remove("status-offline");
-        } else {
-          statusDot.classList.add("status-offline");
-          statusDot.classList.remove("status-online");
-        }
-      });
-      li.appendChild(statusDot);
-
-      li.onclick = () => {
-        selectUser(uid, user.email, li);
-      };
-
-      userList.appendChild(li);
-    });
-  });
+  get(usersRef)
+    .then(snapshot => {
+      usersCache = snapshot.exists() ? snapshot.val() : {};
+    })
+    .catch(console.error);
 }
 
-function selectUser(uid, email, listItemElement) {
-  selectedUser = { uid, email };
-  // Update UI highlight
-  const lis = document.querySelectorAll("#user-list li");
-  lis.forEach(li => li.classList.remove("selected"));
-  listItemElement.classList.add("selected");
-
-  // Update chat header
-  const chatHeader = document.getElementById("chat-header");
-  chatHeader.textContent = `Chat with ${email}`;
-
-  // Enable input and button
-  document.getElementById("messageInput").disabled = false;
-  document.getElementById("sendBtn").disabled = false;
-
-  // Load messages
-  loadMessages();
+// Return profile pic URL or null (no pics here)
+function getProfilePicOrLetter(email) {
+  for (const uid in usersCache) {
+    if (usersCache[uid].email === email) {
+      return usersCache[uid].profilePic || null;
+    }
+  }
+  return null;
 }
 
-function getChatId(uid1, uid2) {
-  // Sort IDs so chat is same for both users
-  return uid1 < uid2 ? uid1 + "_" + uid2 : uid2 + "_" + uid1;
+// Create letter avatar SVG
+function createLetterAvatar(email) {
+  const letter = email.charAt(0).toUpperCase();
+  const colors = ["#1abc9c", "#3498db", "#e67e22", "#9b59b6", "#e74c3c"];
+  const color = colors[letter.charCodeAt(0) % colors.length];
+  return `
+    <svg width="40" height="40" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="20" cy="20" r="20" fill="${color}"/>
+      <text x="50%" y="50%" text-anchor="middle" fill="#fff" dy=".35em" font-family="Arial" font-size="20">${letter}</text>
+    </svg>
+  `;
 }
 
-function sendMessage() {
-  const input = document.getElementById("messageInput");
-  const msg = input.value.trim();
-  if (!msg || !selectedUser) return;
+// Display a single chat message in chat container
+function displayMessage(username, message, timestamp) {
+  const chat = document.getElementById("messages");
+  const div = document.createElement("div");
+  div.className = "message";
 
-  const chatId = getChatId(currentUser.uid, selectedUser.uid);
-  const message = {
-    from: currentUser.uid,
-    to: selectedUser.uid,
-    message: msg,
-    timestamp: Date.now()
-  };
+  // Profile pic or letter avatar
+  const picUrl = getProfilePicOrLetter(username);
 
-  push(ref(db, "private_messages/" + chatId), message);
-  input.value = "";
-}
-
-let messagesListener = null;
-function loadMessages() {
-  if (!selectedUser) return;
-
-  if (messagesListener) {
-    // Remove old listener before adding a new one
-    messagesListener();
+  if (picUrl) {
+    div.innerHTML = `
+      <img src="${picUrl}" class="profile-pic" alt="Profile Pic"/>
+      <span class="username">${username}</span>
+      <span class="text">${message}</span>
+      <span class="timestamp">${timestamp}</span>
+    `;
+  } else {
+    div.innerHTML = `
+      <span class="profile-pic letter-avatar">${createLetterAvatar(username)}</span>
+      <span class="username">${username}</span>
+      <div class="text">${message}</div>
+      <span class="timestamp">${timestamp}</span>
+    `;
   }
 
-  const chatId = getChatId(currentUser.uid, selectedUser.uid);
-  const messagesRef = ref(db, "private_messages/" + chatId);
-  const messagesDiv = document.getElementById("messages");
-  messagesDiv.innerHTML = "";
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
 
-  messagesListener = onChildAdded(messagesRef, (snapshot) => {
-    const data = snapshot.val();
-    displayMessage(data);
+// Load chat messages in real time
+function loadMessages() {
+  const messagesRef = ref(db, "messages");
+  onChildAdded(messagesRef, (snapshot) => {
+    const msg = snapshot.val();
+    if (!msg) return;
+    displayMessage(msg.username, msg.message, msg.timestamp);
   });
 }
 
-function displayMessage(data) {
-  const messagesDiv = document.getElementById("messages");
-  const msgDiv = document.createElement("div");
-  msgDiv.classList.add("message");
-  msgDiv.classList.add(data.from === currentUser.uid ? "you" : "other");
-  msgDiv.textContent = data.message;
+// Signup handler
+window.signup = () => {
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
 
-  const timeSpan = document.createElement("span");
-  timeSpan.classList.add("timestamp");
-  timeSpan.textContent = new Date(data.timestamp).toLocaleTimeString();
+  if (!email || !password) {
+    alert("Email and password are required");
+    return;
+  }
 
-  msgDiv.appendChild(timeSpan);
-  messagesDiv.appendChild(msgDiv);
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
-}
+  createUserWithEmailAndPassword(auth, email, password)
+    .then(({ user }) => {
+      currentUser = user;
+      // Save user info with null profilePic
+      set(ref(db, `users/${user.uid}`), {
+        email: user.email,
+        profilePic: null
+      }).then(() => {
+        alert("Signup successful! You can now log in.");
+      });
+    })
+    .catch(e => {
+      alert("Signup Failed: " + e.message);
+      console.error("Signup error:", e);
+    });
+};
 
+// Login handler
 window.login = () => {
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
+
+  if (!email || !password) {
+    alert("Email and password are required");
+    return;
+  }
+
   signInWithEmailAndPassword(auth, email, password)
     .catch(e => alert("Login Failed: " + e.message));
 };
 
-window.signup = () => {
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value;
-  createUserWithEmailAndPassword(auth, email, password)
-    .then(cred => {
-      // Add user to 'users' in DB
-      const userRef = ref(db, "users/" + cred.user.uid);
-      set(userRef, { email: cred.user.email });
-    })
-    .catch(e => alert("Signup Failed: " + e.message));
+// Send chat message handler
+window.sendMessage = () => {
+  if (!currentUser) {
+    alert("You must be logged in to send messages.");
+    return;
+  }
+  const input = document.getElementById("messageInput");
+  const text = input.value.trim();
+  if (!text) return;
+
+  push(ref(db, "messages"), {
+    uid: currentUser.uid,
+    username: currentUser.email,
+    message: text,
+    timestamp: new Date().toLocaleTimeString()
+  });
+
+  input.value = "";
 };
 
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    currentUser = user;
-    document.getElementById("auth-container").style.display = "none";
-    document.getElementById("chat-container").style.display = "flex";
-    updateOnlineStatus(user.uid, true);
-    loadUsers();
-  } else {
-    currentUser = null;
-    selectedUser = null;
-    document.getElementById("auth-container").style.display = "block";
-    document.getElementById("chat-container").style.display = "none";
-    updateOnlineStatus(currentUser?.uid, false);
-  }
-});
-
+// Logout handler
 window.logout = () => {
   if (currentUser) updateOnlineStatus(currentUser.uid, false);
   signOut(auth);
 };
+
+// Listen for auth changes and update UI
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    currentUser = user;
+    document.getElementById("auth-container").style.display = "none";
+    document.getElementById("chat-container").style.display = "block";
+    updateOnlineStatus(user.uid, true);
+    trackOnlineUsers();
+    loadUsersCache();
+    loadMessages();
+  } else {
+    currentUser = null;
+    document.getElementById("auth-container").style.display = "block";
+    document.getElementById("chat-container").style.display = "none";
+  }
+});
