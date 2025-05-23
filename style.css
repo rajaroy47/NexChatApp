@@ -5,49 +5,28 @@ body {
   justify-content: center;
   align-items: center;
   height: 100vh;
-  flex-direction: column;
 }
 
-#chat-container, #auth-container {
-  background: rgb(133, 126, 126);
-  width: 90%;
-  max-width: 500px;
+#auth-container, #chat-container {
+  background: #444;
   padding: 20px;
   border-radius: 10px;
+  color: white;
+  width: 90%;
+  max-width: 500px;
   box-shadow: 0 0 10px #aaa;
 }
 
-#messages {
-  height: 300px;
-  overflow-y: auto;
-  border: 1px solid #ddd;
-  padding: 10px;
-  margin-bottom: 10px;
-  border-radius: 5px;
-  background-color: #544e4e;
-}
-
-.message {
-  margin-bottom: 10px;
-}
-
-.username {
-  font-weight: bold;
-  color: #3366cc;
-}
-
-.timestamp {
-  float: right;
-  font-size: 0.8em;
-  color: #888;
+h1, h2 {
+  text-align: center;
 }
 
 input[type="text"], input[type="email"], input[type="password"] {
   width: 100%;
   padding: 10px;
-  margin: 5px 0;
+  margin: 10px 0;
   border-radius: 5px;
-  border: 1px solid #ccc;
+  border: none;
 }
 
 button {
@@ -64,4 +43,37 @@ button {
 
 button:hover {
   background-color: #254e9e;
+}
+
+#messages {
+  height: 300px;
+  overflow-y: auto;
+  background: #222;
+  padding: 10px;
+  border-radius: 5px;
+  margin-bottom: 10px;
+}
+
+.message {
+  margin-bottom: 10px;
+}
+
+.username {
+  font-weight: bold;
+  color: #33c;
+}
+
+.timestamp {
+  float: right;
+  font-size: 0.8em;
+  color: #aaa;
+}
+
+.online-users {
+  margin-bottom: 10px;
+  font-size: 0.9em;
+  white-space: pre-wrap;
+  background: #222;
+  padding: 10px;
+  border-radius: 5px;
 }
