@@ -1,4 +1,6 @@
-// Firebase imports - using v9.22.2
+//#############################
+// Firebase version -  v9.22.2
+//#############################
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import {
@@ -18,16 +20,21 @@ import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
   signOut,
+  sendEmailVerification,
+  sendPasswordResetEmail,
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
-// Your Firebase config object (replace with your actual config if different)
+//########################
+//Firebase configuaration
+//########################
+
 const firebaseConfig = {
   apiKey: "AIzaSyBblpZdFi8E3Lcf-4yEoJ3yhUonWmgpgyc",
   authDomain: "nexchat-8c980.firebaseapp.com",
   projectId: "nexchat-8c980",
   storageBucket: "nexchat-8c980.appspot.com",
   messagingSenderId: "87765028514",
-  appId: "1:87765028514:web:26a575692fa3e343e491fb",
+  appId: "1:87765028514:web:26a575692fa3e343e3491fb",
   databaseURL: "https://nexchat-8c980-default-rtdb.firebaseio.com",
 };
 
@@ -50,7 +57,7 @@ window.hideMessageBox = () => {
   document.getElementById("message-box-overlay").classList.remove("show");
 };
 
-// Update user online status in DB
+// Update user online status
 function updateOnlineStatus(uid, isOnline) {
   const statusRef = ref(db, `status/${uid}`);
   const statusData = {
@@ -71,7 +78,7 @@ function updateOnlineStatus(uid, isOnline) {
     });
 
   if (isOnline) {
-    // On disconnect set user offline automatically
+    // On disconnect user offline automatically
     onDisconnect(statusRef)
       .set({
         email: currentUser.email,
@@ -94,6 +101,7 @@ function trackOnlineUsers() {
       console.log("Firebase status data received:", data); // Debugging line
       const list = Object.entries(data)
         .map(([uid, info]) => {
+
           // Ensure info and its properties exist before accessing
           if (!info || !info.email || !info.state) {
             console.warn("Incomplete status data for UID:", uid, info);
@@ -122,8 +130,11 @@ function trackOnlineUsers() {
 
 function timeAgo(timestamp) {
   if (!timestamp) return "";
+
+  // ######################################################################
   // Firebase serverTimestamp returns a number (milliseconds since epoch)
   // If it's an object from serverTimestamp, access its value
+  // ######################################################################
   const timeNum =
     typeof timestamp === "object" && timestamp.hasOwnProperty(".sv")
       ? Date.now() // Placeholder until actual timestamp is available
@@ -179,11 +190,11 @@ function createLetterAvatar(email) {
   ];
   const color = colors[letter.charCodeAt(0) % colors.length];
   return `
-                <svg width="40" height="40" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="20" cy="20" r="20" fill="${color}"/>
-                    <text x="50%" y="50%" text-anchor="middle" fill="#fff" dy=".35em" font-family="Arial" font-size="20">${letter}</text>
-                </svg>
-            `;
+          <svg width="30" height="30" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="15" cy="15" r="20" fill="${color}"/>
+            <text x="50%" y="50%" text-anchor="middle" fill="#fff" dy=".35em" font-family="Arial" font-size="20">${letter}</text>
+          </svg>
+        `;
 }
 
 // Display a single chat message in chat container
@@ -214,18 +225,18 @@ function displayMessage(senderUsername, messageText, timestamp) {
   // Arrange elements based on whether it's my message or not
   if (isMyMessage) {
     div.innerHTML = `
-                    <span class="timestamp">${timestamp}</span>
-                    <div class="text">${messageText}</div>
-                    <span class="username">${senderUsername}</span>
-                    ${avatarHtml}
-                `;
+              <span class="timestamp">${timestamp}</span>
+              <div class="text">${messageText}</div>
+              <span class="username">${senderUsername}</span>
+              ${avatarHtml}
+            `;
   } else {
     div.innerHTML = `
-                    ${avatarHtml}
-                    <span class="username">${senderUsername}</span>
-                    <div class="text">${messageText}</div>
-                    <span class="timestamp">${timestamp}</span>
-                `;
+              ${avatarHtml}
+              <span class="username">${senderUsername}</span>
+              <div class="text">${messageText}</div>
+              <span class="timestamp">${timestamp}</span>
+            `;
   }
 
   chat.appendChild(div);
@@ -249,6 +260,7 @@ function loadMessages() {
   );
 }
 
+
 // Signup handler
 window.signup = () => {
   const email = document.getElementById("email").value.trim();
@@ -261,17 +273,30 @@ window.signup = () => {
 
   createUserWithEmailAndPassword(auth, email, password)
     .then(({ user }) => {
-      currentUser = user;
-      // Save user info with null profilePic
+      // Send email verification
+      sendEmailVerification(user)
+        .then(() => {
+          window.showMessageBox(
+            "Success",
+            "Signup successful! Please check your email to verify your account before logging in."
+          );
+          console.log("Verification email sent to:", user.email);
+        })
+        .catch((error) => {
+          console.error("Error sending verification email:", error);
+          window.showMessageBox(
+            "Error",
+            "Failed to send verification email: " + error.message
+          );
+        });
+
+      // Save user info with null profilePic (do this after sending verification)
       set(ref(db, `users/${user.uid}`), {
         email: user.email,
         profilePic: null,
       })
         .then(() => {
-          window.showMessageBox(
-            "Success",
-            "Signup successful! You can now log in."
-          );
+          console.log("User info saved.");
         })
         .catch((e) => {
           console.error("Error saving user info:", e);
@@ -297,15 +322,57 @@ window.login = () => {
     return;
   }
 
-  signInWithEmailAndPassword(auth, email, password).catch((e) =>
-    window.showMessageBox("Login Failed", e.message)
-  );
+  signInWithEmailAndPassword(auth, email, password)
+    .then((userCredential) => {
+      const user = userCredential.user;
+      if (!user.emailVerified) {
+        signOut(auth).then(() => {
+          window.showMessageBox(
+            "Error",
+            "Your email address is not verified. Please check your inbox and verify your email before logging in."
+          );
+        });
+      }
+      // onAuthStateChanged will handle UI updates upon successful (and verified) login
+    })
+    .catch((e) => {
+      window.showMessageBox("Login Failed", e.message);
+    });
+};
+
+// Password reset handler
+window.resetPassword = () => {
+  const email = document.getElementById("email").value.trim();
+  if (!email) {
+    window.showMessageBox("Error", "Please enter your email address to reset your password.");
+    return;
+  }
+
+  sendPasswordResetEmail(auth, email)
+    .then(() => {
+      window.showMessageBox(
+        "Success",
+        "Password reset email sent! Please check your inbox to reset your password."
+      );
+      console.log("Password reset email sent to:", email);
+    })
+    .catch((error) => {
+      console.error("Error sending password reset email:", error);
+      window.showMessageBox("Error", "Failed to send password reset email: " + error.message);
+    });
 };
 
 // Send chat message handler
 window.sendMessage = () => {
   if (!currentUser) {
     window.showMessageBox("Error", "You must be logged in to send messages.");
+    return;
+  }
+  if (!currentUser.emailVerified) {
+    window.showMessageBox(
+      "Error",
+      "Your email address is not verified. You cannot send messages."
+    );
     return;
   }
   const input = document.getElementById("messageInput");
@@ -347,7 +414,7 @@ window.logout = () => {
 
 // Listen for auth changes and update UI
 onAuthStateChanged(auth, (user) => {
-  if (user) {
+  if (user && user.emailVerified) {
     currentUser = user;
     document.getElementById("auth-container").style.display = "none";
     document.getElementById("chat-container").style.display = "flex"; // Use flex for chat container
@@ -359,7 +426,10 @@ onAuthStateChanged(auth, (user) => {
     currentUser = null;
     document.getElementById("auth-container").style.display = "flex"; // Use flex for auth container
     document.getElementById("chat-container").style.display = "none";
+
+    // ##############################################
     // Clear messages and online users when logged out
+    // ##############################################
     document.getElementById("messages").innerHTML = "";
     document.getElementById("online-users").innerHTML = "";
   }

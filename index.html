@@ -4,46 +4,68 @@
 <head>
   <meta charset="UTF-8" />
   <title>NexChat - Login</title>
-  <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.tailwindcss.com"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
-
-  <!-- Auth Section -->
   <div class="container">
     <div id="message-box-overlay" class="message-box-overlay" onclick="window.hideMessageBox()">
       <div class="message-box" onclick="event.stopPropagation()">
         <h3 id="message-box-title"></h3>
         <p id="message-box-content"></p>
-        <button onclick="window.hideMessageBox()">OK</button>
+        <button onclick="window.hideMessageBox()" class="btn btn-primary">
+          OK
+        </button>
       </div>
     </div>
 
     <div id="auth-container">
-      <h2 class="text-2xl font-bold text-center text-gray-800 mb-4">Welcome to NexChat</h2>
-      <input type="email" id="email" placeholder="Email" class="mb-3">
-      <input type="password" id="password" placeholder="Password" class="mb-4">
-      <button onclick="window.signup()" class="mb-2">Sign Up</button>
-      <button onclick="window.login()">Log In</button>
+      <h2 class="text-center">Welcome to NexChat</h2>
+      <input type="email" id="email" class="form-control mb-3" placeholder="Email" />
+      <input type="password" id="password" class="form-control mb-2" placeholder="Password" />
+      <button onclick="window.signup()" class="btn btn-primary btn-block mb-2">
+        Sign Up
+      </button>
+      <button onclick="window.login()" class="btn btn-success btn-block">
+        Log In
+      </button>
+      <small class="form-text text-right mb-3">
+        <a href="#" onclick="showResetPasswordForm()">Forgot Password?</a>
+      </small>
     </div>
 
-    <div id="chat-container">
+    <!-- ******************************* -->
+    <!-- reset password input container -->
+     <!-- ****************************** -->
+    <div id="reset-password-form" style="display: none;">
+      <h2 class="text-center">Reset Password</h2>
+      <input type="email" id="reset-email" class="form-control reset-form mb-3" placeholder="Your Email" />
+      <button onclick="window.resetPassword()" class="btn btn-info btn-block mb-2">
+        Send Reset Email
+      </button>
+      <button onclick="showLoginSignupForm()" class="btn btn-secondary btn-block">
+        Back to Login
+      </button>
+    </div>
+    <!-- *************************************************************************** -->
+
+    <div id="chat-container" style="display: none;">
       <div class="sidebar">
-        <h3 class="text-xl font-semibold text-gray-700 mb-2">Online Users</h3>
-        <div id="online-users" class="text-sm text-gray-600 flex flex-col gap-1">
-        </div>
-        <button onclick="window.logout()" class="logout-button">Log Out</button>
+        <h3>Online Users</h3>
+        <div id="online-users" class="d-flex flex-column gap-1"></div>
+        <button onclick="window.logout()" class="btn btn-danger btn-block logout-button">
+          Log Out
+        </button>
       </div>
       <div class="chat-main">
-        <div id="messages">
-        </div>
-        <div class="input-area">
-          <input type="text" id="messageInput" placeholder="Type your message..."
-            onkeypress="if(event.key === 'Enter') window.sendMessage()">
-          <button onclick="window.sendMessage()">
-            <img src="/assets/send.png" alt="Send">
+        <div id="messages"></div>
+        <div class="input-area d-flex align-items-center">
+          <input type="text" id="messageInput" class="form-control mr-2" placeholder="Type your message..."
+            onkeypress="if(event.key === 'Enter') window.sendMessage()" />
+          <button onclick="window.sendMessage()" class="btn btn-primary">
+            <img src="send.png" alt="Send" />
           </button>
         </div>
       </div>
@@ -51,6 +73,26 @@
   </div>
 
   <script type="module" src="script.js"></script>
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+  <script>
+    const loginSignupForm = document.getElementById('auth-container');
+    const resetPasswordForm = document.getElementById('reset-password-form');
+
+    function showResetPasswordForm() {
+      loginSignupForm.style.display = 'none';
+      resetPasswordForm.style.display = 'flex';
+      // Optionally pre-fill the email in the reset form
+      document.getElementById('reset-email').value = document.getElementById('email').value;
+    }
+
+    function showLoginSignupForm() {
+      resetPasswordForm.style.display = 'none';
+      loginSignupForm.style.display = 'flex';
+    }
+  </script>
 </body>
 
 </html>
