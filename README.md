@@ -40,7 +40,7 @@ To run NexChat locally, follow these steps:
 
 1.  **Clone the Repository:**
     ```bash
-    git clone [https://github.com/](https://github.com/)[Your GitHub Username]/NexChat.git
+    git clone https://github.com/rajaroy47/NexChatApp.git
     cd NexChat
     ```
 
@@ -70,11 +70,11 @@ To run NexChat locally, follow these steps:
 
 ## Project Structure
 NexChat/
-├── index.html          # Main HTML file
-├── script.js           # JavaScript logic (Firebase integration, UI handling)
-├── style.css           # CSS for custom styling
-├── send.png            # Send button icon (optional)
-└── README.md
+* ├── index.html          # Main HTML file
+* ├── script.js           # JavaScript logic (Firebase integration, UI handling)
+* ├── style.css           # CSS for custom styling
+* ├── send.png            # Send button icon (optional)
+* └── README.md
 
 ## Future Enhancements
 
