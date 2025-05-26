@@ -69,7 +69,7 @@ To run NexChat locally, follow these steps:
     * Simply open the `index.html` file in your preferred web browser. The application will connect to your Firebase project.
 
 ## Project Structure
-NexChat/
+* NexChat/
 * ├── index.html          # Main HTML file
 * ├── script.js           # JavaScript logic (Firebase integration, UI handling)
 * ├── style.css           # CSS for custom styling
