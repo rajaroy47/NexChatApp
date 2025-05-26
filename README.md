@@ -20,6 +20,14 @@ NexChat is a modern, real-time chat application built with JavaScript and levera
 * **Firebase Backend:** Leverages Firebase Realtime Database for real-time data synchronization and Firebase Authentication for user management.
 * **User-friendly Interface:** Intuitive and easy-to-use chat interface.
 
+## Screenshots
+
+Here's a look at the login screen:
+![Login Screen](screenshot/login-sign.jpg)
+
+And the main chat interface:
+![Chat Interface](screenshot/chat.jpg)
+
 ## Technologies Used
 
 * **Frontend:**
