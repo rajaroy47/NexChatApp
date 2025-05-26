@@ -23,7 +23,7 @@ NexChat is a modern, real-time chat application built with JavaScript and levera
 ## Screenshots
 
 ### Login/Signup Screen
-<img src="screenshot/login-sig.jpg" width="400">
+<img src="screenshot/login-sign.jpg" width="400">
 *(A clean and intuitive login and signup interface.)*
 
 ### Main Chat Interface
