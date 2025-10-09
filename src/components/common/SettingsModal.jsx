@@ -111,7 +111,7 @@ export const SettingsModal = ({ currentUser, usersCache, onClose, isInitialSetup
                 
                 {isInitialSetup && (
                     <div className="p-3 bg-purple-900/50 text-purple-200 rounded-lg text-sm">
-                        👋 Welcome to NexChat! Please choose a **Display Name (DP Name)** to start chatting.
+                        👋 Welcome to NexChat! Please choose a **Display Name (DP Name)** to start chatting 😊.
                     </div>
                 )}
                 

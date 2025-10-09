@@ -58,7 +58,7 @@ export const AuthScreen = () => {
                     }
                 }, 50); 
 
-                setMessage('Signup success! Check email to verify, then log in.');
+                setMessage('Signup success! Check email(Spam Folder) to verify, then log in.');
             } else {
                 const { user } = await authMethods.login(email, password);
                 if (!user.emailVerified) {
@@ -88,7 +88,7 @@ export const AuthScreen = () => {
         setLoading(true);
         try {
             await authMethods.resetPassword(email);
-            setMessage('Password reset email sent! Check your inbox.');
+            setMessage('Password reset email sent! Check your inbox(Spam Folder).');
         } catch (e) {
             setMessage(`Reset Error: ${e.message}`);
         } finally {
@@ -99,10 +99,20 @@ export const AuthScreen = () => {
     return (
         <div className="min-h-screen flex items-center justify-center bg-dark-bg p-4 font-inter mobile:bg-dark-bg">
             <div className="w-full max-w-sm p-6 sm:p-8 space-y-6 bg-chat-panel rounded-2xl shadow-2xl transition-all duration-300 mobile:shadow-none mobile:p-4 mobile:bg-chat-panel border border-gray-700">
-                <div className="text-center mobile:text-white">
-                    <h1 className="text-4xl font-extrabold text-white mobile:text-white">NexChat ⚡</h1>
-                    <p className="mt-2 text-sm text-gray-400 mobile:text-gray-400">
-                        {isSigningUp ? 'Join the global conversation' : 'Sign in to start chatting'}
+
+                {/* Compact Header Section */}
+                <div className="text-center">
+                    <div className="flex items-center justify-center space-x-3 mb-3">
+                        <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
+                            <span className="text-white font-bold text-sm">N</span>
+                        </div>
+                        <div className="text-left">
+                            <h1 className="text-xl font-bold text-white">NexChat</h1>
+                            <p className="text-xs text-purple-300">2025 v2.1</p>
+                        </div>
+                    </div>
+                    <p className="text-sm text-gray-400">
+                        {isSigningUp ? 'Join the conversation' : 'Sign in to start chatting'}
                     </p>
                 </div>
 
@@ -124,7 +134,7 @@ export const AuthScreen = () => {
                         required
                     />
 
-                    {isSigningUp && (
+                    {/* {isSigningUp && (
                         <input
                             type="text"
                             placeholder="Display Name (Optional, e.g., 'User99')"
@@ -133,7 +143,7 @@ export const AuthScreen = () => {
                             className="w-full px-4 py-3 border border-gray-600 bg-gray-800 text-white rounded-xl focus:ring-purple-500 focus:border-purple-500 transition duration-150"
                             maxLength={20}
                         />
-                    )}
+                    )} */}
 
                     {message && (
                         <p className={`text-sm font-medium p-2 rounded-lg text-center ${message.includes('Error') || message.includes('not verified') ? 'bg-red-900 text-red-300' : 'bg-green-900 text-green-300'}`}>
@@ -172,7 +182,7 @@ export const AuthScreen = () => {
                     )}
                 </div>
 
-                {/* Developer Info Section - Added here */}
+                {/* Developer Info Section */}
                 <div className="mt-6 pt-4 border-t border-gray-700 space-y-3">
                     <h4 className="text-base font-bold text-gray-300 text-center">Follow Me On</h4>
                     <div className="grid grid-cols-3 gap-3">
@@ -191,6 +201,9 @@ export const AuthScreen = () => {
                             </a>
                         ))}
                     </div>
+                </div>
+                <div className="flex justify-center items-center">
+                    <p className="text-xs text-white">By Raja With ❤️</p>
                 </div>
             </div>
         </div>
