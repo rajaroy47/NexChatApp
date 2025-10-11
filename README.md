@@ -67,7 +67,7 @@ A modern, real-time chat application with beautiful UI, private messaging, and s
 3. **Environment Setup**
    ```bash
    # Copy environment template
-   cp .env.example .env
+   cp .env-example .env
    
    # Edit with your Firebase config
    nano .env
