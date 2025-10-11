@@ -203,7 +203,10 @@ export const AuthScreen = () => {
                     </div>
                 </div>
                 <div className="flex justify-center items-center">
-                    <p className="text-xs text-white">By Raja With ❤️</p>
+                    {/* <p className="text-xs text-gray-400">By Raja With ❤️</p> */}
+                    <p className="text-xs text-gray-400">
+                      By Raja With <span className="animate-heartbeat text-red-500 drop-shadow-[0_0_6px_rgba(255,0,0,0.8)]">❤️</span>
+                    </p>
                 </div>
             </div>
         </div>
