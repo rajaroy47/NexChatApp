@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![NexChat Banner](https://via.placeholder.com/1200x400/7C3AED/ffffff?text=NexChat+-+Modern+Real-time+Chat+Application)
+![NexChat Banner](https://github.com/rajaroy47/NexChatApp/blob/main/public/banner-nexchat.png)
 
 [![React](https://img.shields.io/badge/React-18.2.0-61DAFB?style=for-the-badge&logo=react)](https://reactjs.org/)
 [![Firebase](https://img.shields.io/badge/Firebase-9.23.0-FFCA28?style=for-the-badge&logo=firebase)](https://firebase.google.com/)
