@@ -103,9 +103,14 @@ export const AuthScreen = () => {
                 {/* Compact Header Section */}
                 <div className="text-center">
                     <div className="flex items-center justify-center space-x-3 mb-3">
-                        <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
-                            <span className="text-white font-bold text-sm">N</span>
+                        <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
+                          <img
+                            src="/nexchat.png"
+                            alt="NexChat Logo"
+                            className="w-full h-full object-cover animate-pulse"
+                          />
                         </div>
+
                         <div className="text-left">
                             <h1 className="text-xl font-bold text-white">NexChat</h1>
                             <p className="text-xs text-purple-300">2025 v2.1</p>
