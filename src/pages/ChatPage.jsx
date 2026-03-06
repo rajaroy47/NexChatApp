@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMessages, usePrivateMessages, useUsersStatus, useUsersCache } from '../firebase/hooks';
 import { authMethods } from '../firebase/auth';
 import { sendMessage, sendPrivateMessage, getChatId, getDefaultName, updateOnlineStatus } from '../firebase/db';
@@ -11,65 +11,51 @@ import SettingsModal from '../components/common/SettingsModal';
 const isAdmin = (email) => email && email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
 export const ChatPage = ({ currentUser }) => {
-    // State Management
     const [input, setInput] = useState('');
     const [showUsers, setShowUsers] = useState(false);
-    const [selectedChatPartner, setSelectedChatPartner] = useState(null);
-    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-    const [showSettingsModal, setShowSettingsModal] = useState(false);
-    const [isTyping, setIsTyping] = useState(false);
-    
-    // Refs
-    const chatContainerRef = useRef(null);
-    const typingTimeoutRef = useRef(null);
+    const [selectedChatPartner, setSelectedChatPartner] = useState(null); 
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false); 
+    const [showSettingsModal, setShowSettingsModal] = useState(false); 
 
-    // Custom Hooks
     const globalMessages = useMessages();
-    const usersStatusData = useUsersStatus(currentUser);
-    const usersCache = useUsersCache();
+    const usersStatusData = useUsersStatus(currentUser); 
+    const usersCache = useUsersCache(); 
 
-    // Derived Data
-    const currentUserInfo = usersCache[currentUser?.uid];
-    const currentDisplayName = currentUserInfo?.displayName || getDefaultName(currentUser?.email);
-    const isClientAdmin = isAdmin(currentUser?.email);
+    const currentUserInfo = usersCache[currentUser.uid];
+    const currentDisplayName = currentUserInfo ? currentUserInfo.displayName : getDefaultName(currentUser.email);
+    const isClientAdmin = isAdmin(currentUser.email); 
+    
 
-    // Effects
     useEffect(() => {
         if (currentUserInfo && getDefaultName(currentUser.email) === currentUserInfo.displayName) {
             setShowSettingsModal(true);
         }
     }, [currentUserInfo, currentUser.email]);
 
-    useEffect(() => {
-        setShowEmojiPicker(false);
-    }, [selectedChatPartner]);
-
-    // Chat ID and Messages
     const chatId = selectedChatPartner 
         ? getChatId(currentUser.uid, selectedChatPartner.id) 
         : null;
     
-    const privateMessages = usePrivateMessages(chatId);
+    const privateMessages = usePrivateMessages(chatId); 
     const activeMessages = selectedChatPartner ? privateMessages : globalMessages;
 
-    // Processed Users List with Enhanced Data
+    useEffect(() => {
+        setShowEmojiPicker(false);
+        if (!showSettingsModal) {
+            setShowSettingsModal(false);
+        }
+    }, [selectedChatPartner]);
+
     const allRegisteredUsers = Object.values(usersCache)
         .filter(u => u.id !== currentUser.uid)
         .map(user => {
             const status = usersStatusData[user.id] || { state: 'offline', lastChanged: null, email: user.email };
-            const isPartner = selectedChatPartner?.id === user.id;
-            
             return {
                 id: user.id,
                 email: user.email,
-                displayName: user.displayName,
+                displayName: user.displayName, 
                 state: status.state,
-                lastChanged: status.lastChanged,
-                isPartner,
-                // Add typing indicator (you'd need to implement this in your backend)
-                isTyping: false,
-                // Add unread count (you'd need to implement this)
-                unreadCount: 0
+                lastChanged: status.lastChanged
             };
         })
         .sort((a, b) => {
@@ -78,8 +64,7 @@ export const ChatPage = ({ currentUser }) => {
             return (b.lastChanged || 0) - (a.lastChanged || 0);
         });
 
-    // Handlers
-    const handleSend = useCallback((e) => {
+    const handleSend = (e) => {
         e.preventDefault();
         if (!currentUser || !currentUser.emailVerified || !input.trim()) return;
         
@@ -88,77 +73,33 @@ export const ChatPage = ({ currentUser }) => {
             return;
         }
 
-        const messageContent = input.trim();
-
         if (selectedChatPartner) {
             sendPrivateMessage(
                 currentUser.uid,
                 currentDisplayName,
                 selectedChatPartner.id,
-                messageContent
-            ).then(() => {
-                setInput('');
-                // Reset typing indicator
-                if (typingTimeoutRef.current) {
-                    clearTimeout(typingTimeoutRef.current);
-                }
-            });
+                input
+            ).then(() => setInput(''));
         } else {
-            sendMessage(currentUser.uid, currentDisplayName, messageContent)
+            sendMessage(currentUser.uid, currentDisplayName, input)
                 .then(() => setInput(''))
                 .catch(error => console.error("Error sending message:", error));
         }
         setShowEmojiPicker(false);
-    }, [currentUser, currentDisplayName, input, selectedChatPartner]);
+    };
 
-    const handleTyping = useCallback((value) => {
-        setInput(value);
-        
-        // Typing indicator logic
-        if (!selectedChatPartner) return;
-        
-        if (!isTyping) {
-            setIsTyping(true);
-            // You would emit typing event here
-        }
-
-        if (typingTimeoutRef.current) {
-            clearTimeout(typingTimeoutRef.current);
-        }
-
-        typingTimeoutRef.current = setTimeout(() => {
-            setIsTyping(false);
-            // You would emit stop typing event here
-        }, 1000);
-    }, [selectedChatPartner, isTyping]);
-
-    const handleLogout = useCallback(() => {
+    const handleLogout = () => {
         updateOnlineStatus(currentUser.uid, currentUser.email, false);
         authMethods.logout().catch(console.error);
-    }, [currentUser]);
-
-    const handleSelectPartner = useCallback((partner) => {
-        setSelectedChatPartner(partner);
-        setShowUsers(false);
-    }, []);
-
-    // Cleanup
-    useEffect(() => {
-        return () => {
-            if (typingTimeoutRef.current) {
-                clearTimeout(typingTimeoutRef.current);
-            }
-        };
-    }, []);
-
+    };
+    
     const chatTitle = selectedChatPartner 
         ? `Chatting with: ${selectedChatPartner.displayName}` 
-        : 'Global Chat';
+        : 'Global Chat ✨';
 
     return (
-        <div className="flex h-screen w-screen bg-[#0A0A0A] font-['Inter'] md:flex-row flex-col overflow-hidden">
+        <div className="flex h-screen w-screen bg-dark-bg font-inter md:flex-row flex-col">
             
-            {/* Settings Modal */}
             {showSettingsModal && (
                 <SettingsModal 
                     currentUser={currentUser} 
@@ -168,96 +109,71 @@ export const ChatPage = ({ currentUser }) => {
                 />
             )}
 
-            {/* User List Panel */}
+            {/* UserList with higher z-index */}
             <UserList 
                 allRegisteredUsers={allRegisteredUsers}
                 selectedChatPartner={selectedChatPartner}
-                setSelectedChatPartner={handleSelectPartner}
+                setSelectedChatPartner={setSelectedChatPartner}
                 setShowUsers={setShowUsers}
                 currentUser={currentUser}
                 usersCache={usersCache}
                 showUsers={showUsers}
             />
             
-            {/* Main Chat Area */}
-            <div className="flex-1 flex flex-col min-w-0 w-full bg-[#0A0A0A] relative">
+            <div className="flex-1 flex flex-col min-w-0 w-full bg-dark-bg">
                 
-                {/* Header */}
-                <header className="flex items-center justify-between px-4 sm:px-6 py-3 bg-[#0C0C0C] border-b border-white/5 sticky top-0 z-20 backdrop-blur-sm">
-                    
-                    {/* Mobile Menu Toggle */}
+                <header className="flex justify-between items-center p-4 bg-chat-panel shadow-md border-b border-gray-700 sticky top-0 z-20">
+                  
                     <button 
                         onClick={() => setShowUsers(true)} 
-                        className="md:hidden relative w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 transition-colors duration-300"
+                        className="md:hidden p-2 text-white hover:text-purple-300 rounded-lg bg-gray-800"
                         aria-label="Show user list"
                     >
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                            </svg>
-                        </div>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
                     </button>
                     
-                    {/* Chat Title with Animation */}
-                    <div className="flex-1 text-center">
-                        <h1 className="inline-flex items-center gap-2 text-lg sm:text-xl font-semibold">
-                            <span className="bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                                {chatTitle}
-                            </span>
-                            {selectedChatPartner && (
-                                <span className={`w-2 h-2 rounded-full ${
-                                    selectedChatPartner.state === 'online' ? 'bg-green-500 animate-pulse' : 'bg-gray-500'
-                                }`} />
-                            )}
-                        </h1>
-                    </div>
+                    <h1 className="text-xl font-bold text-white flex-1 text-center">{chatTitle}</h1>
                     
-                    {/* Header Actions */}
-                    <div className="flex items-center gap-2">
-                        {/* Settings Button */}
+                    <div className='flex items-center space-x-2'>
                         <button 
                             onClick={() => setShowSettingsModal(true)}
-                            className="group relative w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 transition-all duration-300"
-                            title="Settings"
+                            className="p-2 text-gray-400 hover:text-purple-400 transition duration-150 rounded-lg border border-gray-600 hover:bg-gray-700"
+                            title="User Settings"
                         >
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <svg className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                            </div>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-5 w-5 animate-spin"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M11.983 1.907a1 1 0 00-1.966 0l-.254 1.53a7.025 7.025 0 00-1.277.74L7.01 2.792a1 1 0 00-1.42 1.42l1.385 1.475a7.028 7.028 0 00-.74 1.277l-1.53.254a1 1 0 000 1.966l1.53.254c.177.458.416.889.74 1.277L5.59 12.57a1 1 0 101.42 1.42l1.475-1.385c.388.324.819.563 1.277.74l.254 1.53a1 1 0 001.966 0l.254-1.53a7.025 7.025 0 001.277-.74l1.475 1.385a1 1 0 001.42-1.42l-1.385-1.475c.324-.388.563-.819.74-1.277l1.53-.254a1 1 0 000-1.966l-1.53-.254a7.028 7.028 0 00-.74-1.277l1.385-1.475a1 1 0 00-1.42-1.42l-1.475 1.385a7.025 7.025 0 00-1.277-.74l-.254-1.53zM10 13a3 3 0 110-6 3 3 0 010 6z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
                         </button>
-
-                        {/* Logout Button */}
                         <button 
                             onClick={handleLogout} 
-                            className="group relative w-10 h-10 rounded-xl bg-red-500/10 hover:bg-red-500/20 transition-all duration-300"
+                            className="text-sm font-bold text-red-400 hover:text-red-300 py-2 px-3 transition duration-150 rounded-lg border border-red-500 hover:bg-red-900"
                             title="Logout"
                         >
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <svg className="w-5 h-5 text-red-400 group-hover:text-red-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                                </svg>
-                            </div>
+                            Logout
                         </button>
                     </div>
                 </header>
 
-                {/* Chat Window */}
-                <div ref={chatContainerRef} className="flex-1 overflow-hidden">
-                    <ChatWindow 
-                        messages={activeMessages}
-                        currentUser={currentUser}
-                        usersCache={usersCache}
-                        selectedChatPartner={selectedChatPartner}
-                        chatId={chatId}
-                    />
-                </div>
+                <ChatWindow 
+                    messages={activeMessages}
+                    currentUser={currentUser}
+                    usersCache={usersCache}
+                    selectedChatPartner={selectedChatPartner}
+                    chatId={chatId} // Add this line
+                />
 
-                {/* Chat Input */}
                 <ChatInput 
                     input={input}
-                    setInput={handleTyping}
+                    setInput={setInput}
                     handleSend={handleSend}
                     currentUser={currentUser}
                     selectedChatPartner={selectedChatPartner}
@@ -265,24 +181,16 @@ export const ChatPage = ({ currentUser }) => {
                     setShowEmojiPicker={setShowEmojiPicker}
                     currentDisplayName={currentDisplayName}
                     getDefaultName={getDefaultName}
+                    
                 />
-
-                {/* Typing Indicator (optional) */}
-                {isTyping && selectedChatPartner && (
-                    <div className="absolute bottom-24 left-6 px-3 py-1.5 bg-white/5 rounded-lg border border-white/10">
-                        <p className="text-xs text-gray-400">
-                            <span className="font-medium text-purple-400">{currentDisplayName}</span> is typing...
-                        </p>
-                    </div>
-                )}
             </div>
             
-            {/* Mobile Overlay */}
+            {/* Overlay with lower z-index - FIXED: Changed from z-30 to z-35 */}
             {showUsers && (
                 <div 
-                    className="fixed inset-0 bg-black/80 backdrop-blur-sm z-30 md:hidden animate-fade-in" 
+                    className="fixed inset-0 bg-black opacity-90 z-35 md:hidden" 
                     onClick={() => setShowUsers(false)}
-                />
+                ></div>
             )}
         </div>
     );
