@@ -58,3 +58,54 @@ background-image: radial-gradient(1000px 600px at 10% 20%, rgba(124,58,237,0.12)
 }
 
 
+
+/* ── NexChat custom utilities ─────────────────────────────────────────────── */
+
+/* Thin dark scrollbar for chat areas */
+.nexchat-scrollbar::-webkit-scrollbar {
+  width: 3px;
+}
+.nexchat-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.nexchat-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.08);
+  border-radius: 4px;
+}
+.nexchat-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.14);
+}
+
+/* Pop-in animation for delete button */
+@keyframes pop-in {
+  0%   { transform: scale(0.5); opacity: 0; }
+  70%  { transform: scale(1.1); }
+  100% { transform: scale(1);   opacity: 1; }
+}
+.animate-pop-in {
+  animation: pop-in 0.18s ease-out forwards;
+}
+
+/* Slide up animation for emoji picker */
+@keyframes slide-in-up {
+  from { transform: translateY(8px); opacity: 0; }
+  to   { transform: translateY(0);   opacity: 1; }
+}
+.animate-slide-in-up {
+  animation: slide-in-up 0.2s ease-out forwards;
+}
+
+/* Slide down notification */
+@keyframes slide-down {
+  from { transform: translateX(-50%) translateY(-12px); opacity: 0; }
+  to   { transform: translateX(-50%) translateY(0);     opacity: 1; }
+}
+.animate-slide-down {
+  animation: slide-down 0.25s ease-out forwards;
+}
+
+/* Chat page full height */
+.nexchat-page {
+  height: 100dvh;
+  overflow: hidden;
+}

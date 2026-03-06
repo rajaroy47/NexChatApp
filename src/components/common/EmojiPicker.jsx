@@ -1,43 +1,57 @@
 import React, { useState, useRef, useEffect } from 'react';
 
-const CATS = {
-  '🙂': ['😊','😂','😎','🥳','😍','🤔','😴','🥺','😤','🤯','😭','😅','🤣','😇','🥰','😏','😬','🤗','😶','🙄'],
-  '👋': ['👍','👎','👏','🙌','🤝','✌️','🤞','👊','💪','🫶','🤜','👋','🤙','🖐️','👌','🤏','🤘','🫵','🫱','🫲'],
-  '❤️': ['❤️','🔥','🌟','💯','✨','⭐','💔','💖','💫','⚡','💝','🌈','💎','🏆','🎯','💡','🔑','🌺','🍀','🦋'],
-  '🎉': ['🎉','🎊','🎈','🎁','🎂','🥂','🍕','☕','🍔','🍦','🍩','🍣','🍜','🥗','🍿','🧁','🥤','🍓','🍇','🍑'],
-  '🚀': ['🚀','✈️','🌍','☀️','🌙','🌊','🏔️','🌸','🦁','🐬','🦋','🌻','⛰️','🏖️','🌌','🎆','🌅','🌠','🌋','❄️'],
-  '🎮': ['🎮','🎵','📚','💻','📱','🎨','🔧','💡','📷','🎬','🏆','⚽','🏀','🎸','🎺','🎭','📡','🔭','🎲','♟️'],
+const EMOJI_CATEGORIES = {
+  'Smileys': ['😊','😂','🤣','😍','🥰','😘','😎','🤔','😴','🥺','😤','🤯','😅','😇','🤩','🥳','😬','🙄','😯','😳','🤗','🫠','😶','🫡','🤭'],
+  'Hands':   ['👍','👎','👏','🙌','🤝','✌️','🤞','👊','💪','🫶','🙏','🤙','👋','✋','👌','🤌','🫵','🖖','👈','👉','👆','👇','☝️','🤏','🫳'],
+  'Hearts':  ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','💖','💗','💓','💞','💝','💘','💟','✨','💫','⭐','🌟','🔥','💯','🎯','⚡'],
+  'Party':   ['🎉','🎊','🎈','🎁','🎂','🥂','🍕','☕','🍔','🍦','🍰','🥳','🎵','🎶','🎤','🪅','🎆','🎇','🧁','🍾','🥐','🍜','🍣','🧃','🍺'],
+  'Nature':  ['🚀','✈️','🌍','☀️','🌈','🌙','💧','🌸','🌺','🌻','🌿','🍃','🌊','🌄','🦋','🐶','🐱','🦁','🐼','🦊','🐸','🌵','🦄','🌙','🌏'],
+  'Objects': ['⚽','🏀','🎮','📚','💻','📱','🎨','🔧','💡','🔑','🏆','🎯','🎲','♟️','🎭','🎬','📷','🔭','⌚','💎','🧲','🪄','🧩','🚗','🏠'],
 };
 
-const CAT_LABELS = { '🙂':'Smileys','👋':'Gestures','❤️':'Symbols','🎉':'Food & Fun','🚀':'Nature','🎮':'Objects' };
+const CATEGORY_ICONS = {
+  'Smileys': '😊',
+  'Hands':   '👍',
+  'Hearts':  '❤️',
+  'Party':   '🎉',
+  'Nature':  '🌍',
+  'Objects': '🎮',
+};
 
 export const EmojiPicker = ({ onEmojiSelect, onClose }) => {
-  const [cat, setCat] = useState('🙂');
-  const [q, setQ] = useState('');
-  const ref = useRef(null);
+  const [activeCategory, setActiveCategory] = useState('Smileys');
+  const [search, setSearch] = useState('');
   const searchRef = useRef(null);
 
   useEffect(() => {
-    searchRef.current?.focus();
-    const fn = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
-    document.addEventListener('mousedown', fn);
-    return () => document.removeEventListener('mousedown', fn);
-  }, [onClose]);
+    setTimeout(() => searchRef.current?.focus(), 50);
+  }, []);
 
-  const all = Object.values(CATS).flat();
-  const emojis = q.trim()
-    ? all.filter(e => e.includes(q))
-    : CATS[cat];
+  const allEmojis = Object.values(EMOJI_CATEGORIES).flat();
+  const displayed = search.trim()
+    ? allEmojis.filter(e => e.includes(search))
+    : EMOJI_CATEGORIES[activeCategory];
+
+  // KEY FIX: Do NOT call onClose after selecting emoji
+  const handleEmojiClick = (e, emoji) => {
+    e.stopPropagation();
+    onEmojiSelect(emoji);
+    // Intentionally NOT calling onClose — picker stays open
+  };
 
   return (
     <div
-      ref={ref}
-      className="w-[280px] sm:w-72 bg-[#141414] border border-white/[0.09] rounded-2xl shadow-2xl overflow-hidden"
+      className="w-80 bg-[#141414] border border-white/10 rounded-2xl shadow-2xl shadow-black/60 overflow-hidden"
+      onMouseDown={e => e.stopPropagation()}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-3 pt-3 pb-2 border-b border-white/[0.06]">
+      <div className="flex items-center justify-between px-3 pt-3 pb-2">
         <span className="text-[13px] font-semibold text-gray-300">Emoji</span>
-        <button onClick={onClose} className="w-6 h-6 flex items-center justify-center rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-colors">
+        <button
+          onClick={onClose}
+          onMouseDown={e => e.stopPropagation()}
+          className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-white/10 text-gray-500 hover:text-white transition-colors"
+        >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -45,7 +59,7 @@ export const EmojiPicker = ({ onEmojiSelect, onClose }) => {
       </div>
 
       {/* Search */}
-      <div className="px-3 py-2">
+      <div className="px-3 pb-2">
         <div className="relative">
           <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-600 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -53,45 +67,63 @@ export const EmojiPicker = ({ onEmojiSelect, onClose }) => {
           <input
             ref={searchRef}
             type="text"
-            value={q}
-            onChange={e => setQ(e.target.value)}
-            placeholder="Search…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search emoji…"
             style={{ fontSize: '16px' }}
-            className="w-full bg-white/5 border border-white/[0.07] rounded-xl pl-8 pr-3 py-1.5 text-[13px] text-white placeholder-gray-600 focus:outline-none focus:border-violet-500/40 transition-colors"
+            onMouseDown={e => e.stopPropagation()}
+            className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-white/5 border border-white/[0.07] text-[13px] text-white placeholder-gray-600 focus:outline-none focus:border-violet-500/40 transition-all"
           />
         </div>
       </div>
 
       {/* Category tabs */}
-      {!q && (
-        <div className="flex gap-0.5 px-3 pb-1">
-          {Object.keys(CATS).map(k => (
+      {!search && (
+        <div className="flex gap-0.5 px-2 pb-2 border-b border-white/[0.06]">
+          {Object.entries(CATEGORY_ICONS).map(([cat, icon]) => (
             <button
-              key={k}
-              onClick={() => setCat(k)}
-              title={CAT_LABELS[k]}
-              className={`flex-1 py-1.5 rounded-lg text-base transition-all ${cat === k ? 'bg-violet-500/20 scale-110' : 'hover:bg-white/5 opacity-60 hover:opacity-100'}`}
+              key={cat}
+              onClick={e => { e.stopPropagation(); setActiveCategory(cat); }}
+              onMouseDown={e => e.stopPropagation()}
+              title={cat}
+              className={`flex-1 py-1.5 rounded-lg text-base transition-all ${
+                activeCategory === cat
+                  ? 'bg-violet-500/20 scale-105'
+                  : 'hover:bg-white/5 opacity-50 hover:opacity-100'
+              }`}
             >
-              {k}
+              {icon}
             </button>
           ))}
         </div>
       )}
 
-      {/* Grid */}
-      <div className="grid grid-cols-8 gap-0.5 px-2 pb-2 max-h-48 overflow-y-auto nc-scroll">
-        {emojis.map(e => (
-          <button
-            key={e}
-            onClick={() => { onEmojiSelect(e); onClose(); }}
-            className="aspect-square flex items-center justify-center text-lg hover:bg-white/5 rounded-lg transition-all hover:scale-125 active:scale-95"
-          >
-            {e}
-          </button>
-        ))}
-        {emojis.length === 0 && (
-          <div className="col-span-8 py-6 text-center text-[12px] text-gray-600">No results</div>
+      {/* Emoji grid */}
+      <div className="p-2 overflow-y-auto nexchat-scrollbar" style={{ height: '200px' }}>
+        {displayed.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-gray-600">
+            <span className="text-2xl mb-1">🔍</span>
+            <p className="text-[12px]">No results</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-8 gap-0.5">
+            {displayed.map((emoji, i) => (
+              <button
+                key={`${emoji}-${i}`}
+                onClick={e => handleEmojiClick(e, emoji)}
+                onMouseDown={e => e.stopPropagation()}
+                className="aspect-square flex items-center justify-center text-lg rounded-lg hover:bg-white/10 hover:scale-110 transition-all active:scale-95"
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
         )}
+      </div>
+
+      {/* Footer */}
+      <div className="px-3 py-1.5 border-t border-white/[0.05]">
+        <p className="text-[10px] text-gray-600 text-center">Click to insert · picker stays open</p>
       </div>
     </div>
   );

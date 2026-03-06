@@ -120,45 +120,72 @@ export const ChatPage = ({ currentUser }) => {
                 showUsers={showUsers}
             />
             
-            <div className="flex-1 flex flex-col min-w-0 w-full bg-dark-bg">
+            <div className="flex-1 flex flex-col min-w-0 w-full" style={{ background: '#0a0a0a' }}>
                 
-                <header className="flex justify-between items-center p-4 bg-chat-panel shadow-md border-b border-gray-700 sticky top-0 z-20">
-                  
-                    <button 
-                        onClick={() => setShowUsers(true)} 
-                        className="md:hidden p-2 text-white hover:text-purple-300 rounded-lg bg-gray-800"
+                {/* Modern header */}
+                <header className="flex items-center gap-3 px-4 py-3 bg-[#0c0c0c] border-b border-white/[0.05] sticky top-0 z-20">
+                    {/* Mobile menu toggle */}
+                    <button
+                        onClick={() => setShowUsers(true)}
+                        className="md:hidden w-9 h-9 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-white/5 transition-colors flex-shrink-0"
                         aria-label="Show user list"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
                     </button>
-                    
-                    <h1 className="text-xl font-bold text-white flex-1 text-center">{chatTitle}</h1>
-                    
-                    <div className='flex items-center space-x-2'>
-                        <button 
+
+                    {/* Chat info */}
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                            {selectedChatPartner ? (
+                                <>
+                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-[13px] font-bold text-white flex-shrink-0">
+                                        {selectedChatPartner.displayName?.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <h1 className="text-[15px] font-semibold text-white leading-tight truncate">{selectedChatPartner.displayName}</h1>
+                                        <p className={`text-[11px] leading-tight ${selectedChatPartner.state === 'online' ? 'text-emerald-500' : 'text-gray-600'}`}>
+                                            {selectedChatPartner.state === 'online' ? 'Active now' : 'Offline'}
+                                        </p>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-600 to-pink-600 flex items-center justify-center flex-shrink-0">
+                                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h1 className="text-[15px] font-semibold text-white leading-tight">Global Chat</h1>
+                                        <p className="text-[11px] text-emerald-500 leading-tight">Everyone · Live</p>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                        <button
                             onClick={() => setShowSettingsModal(true)}
-                            className="p-2 text-gray-400 hover:text-purple-400 transition duration-150 rounded-lg border border-gray-600 hover:bg-gray-700"
-                            title="User Settings"
+                            className="w-9 h-9 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+                            title="Settings"
                         >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-5 w-5 animate-spin"
-                              viewBox="0 0 20 20"
-                              fill="currentColor"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M11.983 1.907a1 1 0 00-1.966 0l-.254 1.53a7.025 7.025 0 00-1.277.74L7.01 2.792a1 1 0 00-1.42 1.42l1.385 1.475a7.028 7.028 0 00-.74 1.277l-1.53.254a1 1 0 000 1.966l1.53.254c.177.458.416.889.74 1.277L5.59 12.57a1 1 0 101.42 1.42l1.475-1.385c.388.324.819.563 1.277.74l.254 1.53a1 1 0 001.966 0l.254-1.53a7.025 7.025 0 001.277-.74l1.475 1.385a1 1 0 001.42-1.42l-1.385-1.475c.324-.388.563-.819.74-1.277l1.53-.254a1 1 0 000-1.966l-1.53-.254a7.028 7.028 0 00-.74-1.277l1.385-1.475a1 1 0 00-1.42-1.42l-1.475 1.385a7.025 7.025 0 00-1.277-.74l-.254-1.53zM10 13a3 3 0 110-6 3 3 0 010 6z"
-                                clipRule="evenodd"
-                              />
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
                         </button>
-                        <button 
-                            onClick={handleLogout} 
-                            className="text-sm font-bold text-red-400 hover:text-red-300 py-2 px-3 transition duration-150 rounded-lg border border-red-500 hover:bg-red-900"
+                        <button
+                            onClick={handleLogout}
+                            className="w-9 h-9 flex items-center justify-center rounded-full text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                             title="Logout"
                         >
-                            Logout
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                            </svg>
                         </button>
                     </div>
                 </header>
