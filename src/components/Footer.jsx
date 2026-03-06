@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import logo from "../assets/images/nexchat.png";
 
 const Footer = () => {
   return (
@@ -8,7 +9,7 @@ const Footer = () => {
           {/* Brand */}
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <img src="/assets/images/nexchat.png" alt="NexChat" className="w-7 h-7 rounded-lg" />
+              <img src={logo} alt="NexChat" className="w-7 h-7 rounded-lg" />
               <span className="text-white font-bold text-lg">NexChat</span>
             </div>
             <p className="text-gray-500 text-sm leading-relaxed">
