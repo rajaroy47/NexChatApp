@@ -10,7 +10,8 @@ export const ChatInput = ({
     showEmojiPicker,
     setShowEmojiPicker,
     currentDisplayName,
-    getDefaultName 
+    getDefaultName,
+    setShowSettingsModal 
 }) => {
     const [isFocused, setIsFocused] = useState(false);
     const inputRef = useRef(null);
@@ -18,7 +19,6 @@ export const ChatInput = ({
 
     const handleEmojiSelect = (emoji) => {
         setInput(prevInput => prevInput + emoji);
-        // Focus back on input after emoji selection
         setTimeout(() => inputRef.current?.focus(), 0);
     };
 
@@ -29,7 +29,6 @@ export const ChatInput = ({
         }
     };
 
-    // Close emoji picker on click outside
     useEffect(() => {
         const handleClickOutside = (e) => {
             if (formRef.current && !formRef.current.contains(e.target)) {
@@ -45,57 +44,80 @@ export const ChatInput = ({
     const placeholder = !isVerified 
         ? "Verify your email to start chatting..."
         : selectedChatPartner 
-            ? `Message ${selectedChatPartner.displayName}...` 
-            : "Type your message in Global Chat...";
+            ? `Message @${selectedChatPartner.displayName}` 
+            : "Message Global Chat";
 
     return (
-        <footer className="relative bg-gradient-to-t from-[#0C0C0C] to-transparent pt-4">
-            {/* Emoji Picker */}
+        <div className="sticky bottom-0 bg-[#0A0A0A] border-t border-white/5">
+            {/* Emoji Picker - Instagram style above input */}
             {showEmojiPicker && (
-                <div className="absolute bottom-full left-4 mb-2 z-50">
-                    <EmojiPicker 
-                        onEmojiSelect={handleEmojiSelect} 
-                        onClose={() => setShowEmojiPicker(false)}
-                    />
+                <div className="absolute bottom-full left-0 right-0 mb-2 px-4 z-50">
+                    <div className="max-w-md mx-auto">
+                        <EmojiPicker 
+                            onEmojiSelect={handleEmojiSelect} 
+                            onClose={() => setShowEmojiPicker(false)}
+                        />
+                    </div>
                 </div>
             )}
-            
+
+            {/* Warning Messages - WhatsApp style banners */}
+            {currentUser && !isVerified && (
+                <div className="px-4 pt-2">
+                    <div className="flex items-center gap-2 p-2.5 bg-red-500/10 rounded-lg border border-red-500/20">
+                        <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                        <p className="text-xs text-red-400 flex-1">
+                            Verify your email to start chatting
+                        </p>
+                        <button className="text-xs text-red-400 hover:text-red-300 font-medium">
+                            Resend
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {getDefaultName(currentUser?.email) === currentDisplayName && !selectedChatPartner && isVerified && (
+                <div className="px-4 pt-2">
+                    <div 
+                        onClick={() => setShowSettingsModal?.(true)}
+                        className="flex items-center gap-2 p-2.5 bg-purple-500/10 rounded-lg border border-purple-500/20 cursor-pointer hover:bg-purple-500/20 transition-colors"
+                    >
+                        <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse" />
+                        <p className="text-xs text-purple-400 flex-1">
+                            Set a display name to start chatting
+                        </p>
+                        <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                    </div>
+                </div>
+            )}
+
+            {/* Input Form - Instagram style */}
             <form 
                 ref={formRef}
                 onSubmit={handleSend} 
-                className="relative flex items-end gap-2 px-4 pb-4"
+                className="flex items-center gap-2 p-2"
             >
-                {/* Input Container with Glass Effect */}
-                <div className={`
-                    flex-1 flex items-end gap-2 bg-[#1A1A1A] rounded-2xl border-2 transition-all duration-300
-                    ${isFocused 
-                        ? 'border-purple-500/50 bg-[#222] shadow-lg shadow-purple-500/10' 
-                        : 'border-white/5 hover:border-white/10'
-                    }
-                    ${!isVerified ? 'opacity-75' : ''}
-                `}>
-                    {/* Emoji Button */}
-                    <button
-                        type="button"
-                        onClick={() => setShowEmojiPicker(prev => !prev)}
-                        disabled={!isVerified}
-                        className={`
-                            relative w-12 h-12 flex items-center justify-center rounded-2xl transition-all duration-300
-                            ${showEmojiPicker 
-                                ? 'text-purple-400 scale-110' 
-                                : 'text-gray-400 hover:text-white hover:scale-110'
-                            }
-                            disabled:opacity-50 disabled:hover:scale-100
-                        `}
-                        aria-label="Toggle emoji picker"
-                    >
-                        <span className="text-xl transform transition-transform group-hover:rotate-12">😊</span>
-                        {showEmojiPicker && (
-                            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-purple-500 rounded-full" />
-                        )}
-                    </button>
+                {/* Emoji Button - Instagram style */}
+                <button
+                    type="button"
+                    onClick={() => setShowEmojiPicker(prev => !prev)}
+                    disabled={!isVerified}
+                    className={`
+                        w-10 h-10 flex items-center justify-center rounded-full transition-all
+                        ${showEmojiPicker 
+                            ? 'text-purple-400 bg-purple-500/10' 
+                            : 'text-gray-400 hover:text-white hover:bg-white/5'
+                        }
+                        disabled:opacity-50
+                    `}
+                >
+                    <span className="text-xl">😊</span>
+                </button>
 
-                    {/* Input Field */}
+                {/* Input Field - WhatsApp style */}
+                <div className="flex-1 relative">
                     <input
                         ref={inputRef}
                         type="text"
@@ -106,36 +128,37 @@ export const ChatInput = ({
                         onBlur={() => setIsFocused(false)}
                         placeholder={placeholder}
                         disabled={!isVerified}
-                        className="flex-1 py-3 bg-transparent text-white placeholder-gray-500 focus:outline-none disabled:cursor-not-allowed"
+                        className={`
+                            w-full px-4 py-2.5 bg-[#1A1A1A] rounded-full text-white placeholder-gray-500
+                            focus:outline-none transition-all
+                            ${isFocused ? 'ring-2 ring-purple-500/30' : ''}
+                            disabled:opacity-50 disabled:cursor-not-allowed
+                        `}
                         autoComplete="off"
                     />
 
-                    {/* Character Count (optional) */}
+                    {/* Character count - Instagram style */}
                     {input.length > 0 && (
-                        <span className="pr-3 text-xs text-gray-500">
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
                             {input.length}
                         </span>
                     )}
                 </div>
 
-                {/* Send Button */}
+                {/* Send Button - WhatsApp style */}
                 <button
                     type="submit"
                     disabled={isDisabled}
                     className={`
-                        relative group w-12 h-12 flex items-center justify-center rounded-2xl
-                        bg-gradient-to-r from-purple-600 to-pink-600
-                        transition-all duration-300 transform
+                        w-10 h-10 flex items-center justify-center rounded-full transition-all
                         ${!isDisabled 
-                            ? 'hover:scale-110 hover:shadow-lg hover:shadow-purple-500/25 active:scale-95' 
-                            : 'opacity-50 cursor-not-allowed'
+                            ? 'bg-purple-500 text-white hover:bg-purple-600 active:scale-95' 
+                            : 'bg-gray-700 text-gray-400 cursor-not-allowed'
                         }
                     `}
-                    aria-label="Send message"
                 >
-                    {/* Paper Airplane Icon */}
                     <svg 
-                        className="w-5 h-5 text-white transform transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" 
+                        className="w-5 h-5" 
                         fill="none" 
                         stroke="currentColor" 
                         viewBox="0 0 24 24"
@@ -147,41 +170,9 @@ export const ChatInput = ({
                             d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" 
                         />
                     </svg>
-
-                    {/* Ripple Effect on Hover */}
-                    <span className="absolute inset-0 rounded-2xl bg-white/0 group-hover:bg-white/10 transition-colors" />
                 </button>
             </form>
-
-            {/* Warning Messages */}
-            {currentUser && !isVerified && (
-                <div className="mx-4 mb-2 animate-slide-in-up">
-                    <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
-                        <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-                        <p className="text-xs text-red-400">
-                            ⚠️ Email not verified. Please check your inbox to enable messaging.
-                        </p>
-                    </div>
-                </div>
-            )}
-
-            {getDefaultName(currentUser?.email) === currentDisplayName && !selectedChatPartner && isVerified && (
-                <div className="mx-4 mb-2 animate-slide-in-up">
-                    <div 
-                        onClick={() => setShowSettingsModal?.(true)}
-                        className="flex items-center gap-2 p-3 bg-purple-500/10 border border-purple-500/20 rounded-xl cursor-pointer hover:bg-purple-500/20 transition-colors"
-                    >
-                        <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse" />
-                        <p className="text-xs text-purple-400 flex-1">
-                            ⚡ Set a custom display name to start chatting in Global Chat
-                        </p>
-                        <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                    </div>
-                </div>
-            )}
-        </footer>
+        </div>
     );
 };
 
