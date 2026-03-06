@@ -56,7 +56,7 @@ const Navbar = () => {
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl blur-md opacity-0 group-hover:opacity-70 transition-opacity duration-500" />
                 <div className="relative w-9 h-9 rounded-xl overflow-hidden ring-2 ring-white/10 group-hover:ring-purple-500/50 transition-all duration-300">
                   <img 
-                    src="#" 
+                    src="https://res.cloudinary.com/dys8on0yh/image/upload/v1772786485/nexchat_zvxgkf.png" 
                     alt="NexChat" 
                     className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
                   />
