@@ -4,166 +4,182 @@ import Message from './Message';
 export const ChatWindow = ({ messages, currentUser, usersCache, selectedChatPartner, chatId }) => {
     const messagesEndRef = useRef(null);
     const containerRef = useRef(null);
-    const [showScrollButton, setShowScrollButton] = useState(false);
+    const [showScrollBtn, setShowScrollBtn] = useState(false);
     const [isAtBottom, setIsAtBottom] = useState(true);
-    const [prevMessagesLength, setPrevMessagesLength] = useState(0);
-    const [showNewMessageIndicator, setShowNewMessageIndicator] = useState(false);
-    const [keyboardHeight, setKeyboardHeight] = useState(0);
+    const [newMsgCount, setNewMsgCount] = useState(0);
+    const [prevLen, setPrevLen] = useState(0);
+    const [inputBarH, setInputBarH] = useState(68); // track actual input bar height
 
-    // Handle keyboard show/hide on mobile
+    // Track input bar height so chat window doesn't hide behind it
     useEffect(() => {
-        const handleResize = () => {
-            // Visual Viewport API for accurate keyboard height
-            if (window.visualViewport) {
-                const viewportHeight = window.visualViewport.height;
-                const windowHeight = window.innerHeight;
-                const keyboardOpen = viewportHeight < windowHeight;
-                
-                if (keyboardOpen) {
-                    setKeyboardHeight(windowHeight - viewportHeight);
-                    // Scroll to bottom when keyboard opens
-                    setTimeout(() => scrollToBottom("smooth"), 100);
-                } else {
-                    setKeyboardHeight(0);
+        const bar = document.querySelector('.nexchat-input-bar');
+        if (!bar) return;
+        const ro = new ResizeObserver(entries => {
+            for (const e of entries) {
+                setInputBarH(e.contentRect.height + 16); // +16 for safe area
+            }
+        });
+        ro.observe(bar);
+        return () => ro.disconnect();
+    }, []);
+
+    // Also adapt when visual viewport changes (keyboard shows/hides)
+    useEffect(() => {
+        if (!window.visualViewport) return;
+        const onVV = () => {
+            const diff = window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop;
+            if (diff < 50) {
+                // Keyboard hidden – ensure bottom padding reset
+                if (containerRef.current) {
+                    containerRef.current.style.paddingBottom = `${inputBarH}px`;
                 }
             }
         };
+        window.visualViewport.addEventListener('resize', onVV);
+        return () => window.visualViewport.removeEventListener('resize', onVV);
+    }, [inputBarH]);
 
-        window.visualViewport?.addEventListener('resize', handleResize);
-        return () => window.visualViewport?.removeEventListener('resize', handleResize);
+    const scrollToBottom = useCallback((behavior = 'smooth') => {
+        messagesEndRef.current?.scrollIntoView({ behavior, block: 'end' });
     }, []);
 
-    // Smart scroll to bottom - WhatsApp style
-    const scrollToBottom = useCallback((behavior = "smooth") => {
-        if (messagesEndRef.current) {
-            messagesEndRef.current.scrollIntoView({ 
-                behavior,
-                block: "end"
-            });
-        }
-    }, []);
-
-    // Handle scroll events - Instagram style
     const handleScroll = useCallback(() => {
         if (!containerRef.current) return;
-        
         const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
-        const bottomThreshold = 100;
-        const isNearBottom = scrollHeight - scrollTop - clientHeight < bottomThreshold;
-        
-        setShowScrollButton(!isNearBottom);
-        setIsAtBottom(isNearBottom);
-        
-        if (isNearBottom && showNewMessageIndicator) {
-            setShowNewMessageIndicator(false);
-        }
-    }, [showNewMessageIndicator]);
+        const atBottom = scrollHeight - scrollTop - clientHeight < 80;
+        setShowScrollBtn(!atBottom);
+        setIsAtBottom(atBottom);
+        if (atBottom) setNewMsgCount(0);
+    }, []);
 
-    // Auto-scroll logic - WhatsApp style
+    // Auto-scroll on new messages
     useEffect(() => {
-        const messagesLength = messages.length;
-        const lastMessage = messages[messagesLength - 1];
-        const isOwnMessage = lastMessage && (lastMessage.senderUid || lastMessage.uid) === currentUser?.uid;
-        
-        if (messagesLength > prevMessagesLength) {
-            if (isAtBottom || isOwnMessage) {
-                scrollToBottom("smooth");
-                setShowNewMessageIndicator(false);
-            } else {
-                setShowNewMessageIndicator(true);
-            }
+        const len = messages.length;
+        if (len <= prevLen) { setPrevLen(len); return; }
+        const last = messages[len - 1];
+        const isOwn = last && (last.senderUid || last.uid) === currentUser?.uid;
+        if (isAtBottom || isOwn) {
+            scrollToBottom('smooth');
+            setNewMsgCount(0);
+        } else {
+            setNewMsgCount(c => c + (len - prevLen));
         }
-        
-        setPrevMessagesLength(messagesLength);
-    }, [messages, isAtBottom, prevMessagesLength, scrollToBottom, currentUser?.uid]);
+        setPrevLen(len);
+    }, [messages, isAtBottom, prevLen, scrollToBottom, currentUser?.uid]);
 
-    // Initial scroll
+    // Jump to bottom on chat switch
     useEffect(() => {
-        scrollToBottom("auto");
+        scrollToBottom('auto');
+        setNewMsgCount(0);
     }, [selectedChatPartner, scrollToBottom]);
 
-    const formatDateHeader = (dateString) => {
-        const date = new Date(dateString);
+    // ── Date grouping ──────────────────────────────────────────────────────────
+    const formatDateLabel = (dateStr) => {
+        const d = new Date(dateStr);
         const today = new Date();
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-
-        if (dateString === today.toDateString()) {
-            return 'TODAY';
-        } else if (dateString === yesterday.toDateString()) {
-            return 'YESTERDAY';
-        } else {
-            return date.toLocaleDateString('en-US', { 
-                day: 'numeric',
-                month: 'long',
-                year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
-            }).toUpperCase();
-        }
+        const yday = new Date(today); yday.setDate(today.getDate() - 1);
+        if (dateStr === today.toDateString()) return 'Today';
+        if (dateStr === yday.toDateString()) return 'Yesterday';
+        return d.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: d.getFullYear() !== today.getFullYear() ? 'numeric' : undefined });
     };
 
-    const groupMessagesByDate = (messages) => {
-        const groups = [];
-        let currentDate = null;
-        let currentGroup = [];
-
-        messages.sort((a, b) => a.timestamp - b.timestamp).forEach((msg) => {
-            const msgDate = new Date(msg.timestamp).toDateString();
-            
-            if (msgDate !== currentDate) {
-                if (currentGroup.length > 0) {
-                    groups.push({ date: currentDate, messages: currentGroup });
-                }
-                currentDate = msgDate;
-                currentGroup = [msg];
+    const grouped = (() => {
+        const out = [];
+        let curDate = null, curGroup = [];
+        [...messages].sort((a, b) => a.timestamp - b.timestamp).forEach(msg => {
+            const d = new Date(msg.timestamp).toDateString();
+            if (d !== curDate) {
+                if (curGroup.length) out.push({ date: curDate, messages: curGroup });
+                curDate = d; curGroup = [msg];
             } else {
-                currentGroup.push(msg);
+                curGroup.push(msg);
             }
         });
-
-        if (currentGroup.length > 0) {
-            groups.push({ date: currentDate, messages: currentGroup });
-        }
-
-        return groups;
-    };
-
-    const messageGroups = groupMessagesByDate(messages);
+        if (curGroup.length) out.push({ date: curDate, messages: curGroup });
+        return out;
+    })();
 
     return (
-        <div className="relative h-full bg-[#0A0A0A] flex flex-col">
-            {/* Main Chat Area - Only this scrolls */}
-            <main 
+        <div className="relative flex-1 flex flex-col min-h-0 bg-nexchat-bg overflow-hidden">
+
+            {/* ── Scrollable message area ──────────────────────────────────────── */}
+            <main
                 ref={containerRef}
                 onScroll={handleScroll}
-                className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar"
+                className="flex-1 overflow-y-auto overflow-x-hidden nexchat-scrollbar"
                 style={{
-                    scrollBehavior: 'smooth',
+                    paddingBottom: inputBarH,
                     WebkitOverflowScrolling: 'touch',
-                    paddingBottom: keyboardHeight > 0 ? '0' : 'env(safe-area-inset-bottom)'
+                    overscrollBehavior: 'contain',
                 }}
             >
-                <div className="px-4 py-4">
-                    {messageGroups.map((group, groupIndex) => (
-                        <div key={group.date} className="relative">
-                            {/* Date Header - WhatsApp style sticky */}
-                            <div className="sticky top-2 z-10 flex justify-center mb-4">
-                                <div className="px-3 py-1 bg-black/50 backdrop-blur-md rounded-full border border-white/10 shadow-lg">
-                                    <span className="text-[11px] font-semibold text-gray-300 tracking-wider">
-                                        {formatDateHeader(group.date)}
+                {/* Subtle texture background */}
+                <div className="absolute inset-0 pointer-events-none opacity-[0.025]"
+                    style={{
+                        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+                    }}
+                />
+
+                {/* Empty state – private chat */}
+                {messages.length === 0 && selectedChatPartner && (
+                    <div className="flex flex-col items-center justify-center min-h-full py-20 px-6 text-center">
+                        <div className="relative mb-5">
+                            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 p-[2px] shadow-[0_0_30px_rgba(139,92,246,0.35)]">
+                                <div className="w-full h-full rounded-full bg-[#111] flex items-center justify-center">
+                                    <span className="text-2xl font-bold text-violet-400">
+                                        {selectedChatPartner.displayName?.charAt(0).toUpperCase()}
                                     </span>
                                 </div>
                             </div>
+                            <span className={`
+                                absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-[#111]
+                                ${selectedChatPartner.state === 'online' ? 'bg-emerald-500' : 'bg-gray-600'}
+                            `} />
+                        </div>
+                        <h3 className="text-[17px] font-semibold text-white mb-1">{selectedChatPartner.displayName}</h3>
+                        <p className="text-[13px] text-gray-500 mb-6">
+                            {selectedChatPartner.state === 'online' ? 'Active now' : 'Tap to start a conversation'}
+                        </p>
+                        <div className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/5 border border-white/[0.07]">
+                            <svg className="w-3.5 h-3.5 text-emerald-500" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
+                            </svg>
+                            <span className="text-[12px] text-gray-500">Messages are private</span>
+                        </div>
+                    </div>
+                )}
 
-                            {/* Messages */}
-                            <div className="space-y-1">
-                                {group.messages.map((msg, msgIndex) => {
-                                    const prevMsg = group.messages[msgIndex - 1];
-                                    const isConsecutive = prevMsg && 
-                                        (prevMsg.senderUid || prevMsg.uid) === (msg.senderUid || msg.uid) &&
-                                        msg.timestamp - prevMsg.timestamp < 300000;
-                                    
-                                    const showAvatar = !isConsecutive;
+                {/* Empty state – global chat */}
+                {messages.length === 0 && !selectedChatPartner && (
+                    <div className="flex flex-col items-center justify-center min-h-full py-20 px-6 text-center">
+                        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-violet-600 via-pink-600 to-orange-500 mb-5 flex items-center justify-center shadow-[0_0_40px_rgba(139,92,246,0.3)]">
+                            <svg className="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a2 2 0 01-2-2v-1M7 8V6a2 2 0 012-2h9a2 2 0 012 2v5a2 2 0 01-2 2h-2" />
+                            </svg>
+                        </div>
+                        <h3 className="text-[17px] font-semibold text-white mb-2">Global Chat</h3>
+                        <p className="text-[13px] text-gray-500 max-w-[220px]">Say hello! Everyone connected can see your messages.</p>
+                    </div>
+                )}
 
+                {/* Messages */}
+                <div className="py-3">
+                    {grouped.map((group) => (
+                        <div key={group.date}>
+                            {/* Date pill */}
+                            <div className="sticky top-2 z-10 flex justify-center my-3">
+                                <span className="px-3 py-[5px] rounded-full text-[11px] font-medium text-gray-400 tracking-wide bg-[#111]/90 backdrop-blur-md border border-white/[0.07] shadow-sm">
+                                    {formatDateLabel(group.date)}
+                                </span>
+                            </div>
+
+                            {/* Message rows */}
+                            <div className="space-y-[2px]">
+                                {group.messages.map((msg, i) => {
+                                    const prev = group.messages[i - 1];
+                                    const sameSender = prev &&
+                                        (prev.senderUid || prev.uid) === (msg.senderUid || msg.uid) &&
+                                        msg.timestamp - prev.timestamp < 300_000;
                                     return (
                                         <Message
                                             key={msg.id}
@@ -173,91 +189,46 @@ export const ChatWindow = ({ messages, currentUser, usersCache, selectedChatPart
                                             currentUser={currentUser}
                                             selectedChatPartner={selectedChatPartner}
                                             chatId={chatId}
-                                            showAvatar={showAvatar}
-                                            isConsecutive={isConsecutive}
+                                            showAvatar={!sameSender}
+                                            isConsecutive={sameSender}
                                         />
                                     );
                                 })}
                             </div>
                         </div>
                     ))}
-
-                    {/* Scroll anchor */}
-                    <div ref={messagesEndRef} className="h-2" />
-
-                    {/* Empty State */}
-                    {messages.length === 0 && selectedChatPartner && (
-                        <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
-                            <div className="relative mb-6">
-                                <div className="w-24 h-24 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 p-[2px]">
-                                    <div className="w-full h-full rounded-full bg-[#0A0A0A] flex items-center justify-center">
-                                        <span className="text-3xl text-purple-400 font-medium">
-                                            {selectedChatPartner.displayName?.charAt(0).toUpperCase()}
-                                        </span>
-                                    </div>
-                                </div>
-                                <span className="absolute bottom-1 right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-[#0A0A0A]" />
-                            </div>
-
-                            <h3 className="text-xl font-semibold text-white mb-2">
-                                {selectedChatPartner.displayName}
-                            </h3>
-                            
-                            <p className="text-sm text-gray-500 max-w-xs mb-8">
-                                You're connected on NexChat
-                            </p>
-
-                            <div className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full">
-                                <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                </svg>
-                                <span className="text-xs text-gray-400">End-to-end encrypted</span>
-                            </div>
-                        </div>
-                    )}
                 </div>
+
+                {/* Scroll anchor */}
+                <div id="chat-messages-end" ref={messagesEndRef} className="h-1" />
             </main>
 
-            {/* New Message Indicator */}
-            {showNewMessageIndicator && (
-                <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-20">
+            {/* ── New messages pill ─────────────────────────────────────────────── */}
+            {newMsgCount > 0 && (
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 animate-slide-down">
                     <button
-                        onClick={() => scrollToBottom("smooth")}
-                        className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-full shadow-lg hover:bg-purple-700 transition-all animate-slide-in-up flex items-center gap-2"
+                        onClick={() => { scrollToBottom('smooth'); setNewMsgCount(0); }}
+                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-violet-600 text-white text-[13px] font-semibold shadow-lg shadow-violet-900/40 hover:bg-violet-700 active:scale-95 transition-all"
                     >
-                        <span>New messages</span>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7-7-7m14-6l-7 7-7-7" />
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 14l-7 7-7-7" />
                         </svg>
+                        {newMsgCount} new {newMsgCount === 1 ? 'message' : 'messages'}
                     </button>
                 </div>
             )}
 
-            {/* Scroll to Bottom Button */}
-            {showScrollButton && (
+            {/* ── Scroll-to-bottom FAB ──────────────────────────────────────────── */}
+            {showScrollBtn && !newMsgCount && (
                 <button
-                    onClick={() => scrollToBottom("smooth")}
-                    className="absolute bottom-6 right-6 group z-20"
+                    onClick={() => scrollToBottom('smooth')}
+                    style={{ bottom: inputBarH + 12 }}
+                    className="absolute right-4 z-20 w-10 h-10 rounded-full bg-[#1e1e1e] border border-white/10 flex items-center justify-center shadow-xl hover:bg-[#252525] active:scale-90 transition-all"
                     aria-label="Scroll to bottom"
                 >
-                    <div className="relative">
-                        <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full blur-md opacity-75 group-hover:opacity-100 transition-opacity" />
-                        <div className="relative w-12 h-12 bg-[#1A1A1A] rounded-full flex items-center justify-center border border-white/10 group-hover:border-purple-500/50 transition-all transform group-hover:scale-110">
-                            {messages.length - prevMessagesLength > 0 && (
-                                <span className="absolute -top-1 -right-1 min-w-[20px] h-5 bg-red-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white px-1 border-2 border-[#0A0A0A]">
-                                    {messages.length - prevMessagesLength}
-                                </span>
-                            )}
-                            <svg 
-                                className="w-5 h-5 text-white transform group-hover:translate-y-0.5 transition-transform" 
-                                fill="none" 
-                                stroke="currentColor" 
-                                viewBox="0 0 24 24"
-                            >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 14l-7 7-7-7m14-6l-7 7-7-7" />
-                            </svg>
-                        </div>
-                    </div>
+                    <svg className="w-4.5 h-4.5 w-[18px] h-[18px] text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 14l-7 7-7-7" />
+                    </svg>
                 </button>
             )}
         </div>

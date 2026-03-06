@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import EmojiPicker from '../common/EmojiPicker';
 
 export const ChatInput = ({ 
@@ -14,29 +14,44 @@ export const ChatInput = ({
     setShowSettingsModal 
 }) => {
     const [isFocused, setIsFocused] = useState(false);
-    const [keyboardVisible, setKeyboardVisible] = useState(false);
+    const [visualViewportHeight, setVisualViewportHeight] = useState(null);
     const inputRef = useRef(null);
     const formRef = useRef(null);
+    const wrapperRef = useRef(null);
 
-    // Handle keyboard visibility
+    // ── Perfect mobile keyboard handling ──────────────────────────────────────
+    // Uses visualViewport API to track keyboard position precisely.
+    // The wrapper sticks to the top of the virtual keyboard on ALL mobile browsers.
     useEffect(() => {
-        const handleResize = () => {
-            if (window.visualViewport) {
-                const viewportHeight = window.visualViewport.height;
-                const windowHeight = window.innerHeight;
-                const isKeyboardOpen = viewportHeight < windowHeight * 0.8;
-                setKeyboardVisible(isKeyboardOpen);
+        if (!window.visualViewport) return;
+
+        const onViewportChange = () => {
+            const vvHeight = window.visualViewport.height;
+            const vvOffsetTop = window.visualViewport.offsetTop;
+            // Calculate what the bottom offset should be so input sits right above keyboard
+            const bottomOffset = window.innerHeight - vvHeight - vvOffsetTop;
+            setVisualViewportHeight({ height: vvHeight, bottom: Math.max(0, bottomOffset) });
+
+            // Scroll chat to bottom after keyboard animation
+            if (bottomOffset > 50) {
+                setTimeout(() => {
+                    document.getElementById('chat-messages-end')?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                }, 80);
             }
         };
 
-        window.visualViewport?.addEventListener('resize', handleResize);
-        return () => window.visualViewport?.removeEventListener('resize', handleResize);
+        window.visualViewport.addEventListener('resize', onViewportChange);
+        window.visualViewport.addEventListener('scroll', onViewportChange);
+        return () => {
+            window.visualViewport.removeEventListener('resize', onViewportChange);
+            window.visualViewport.removeEventListener('scroll', onViewportChange);
+        };
     }, []);
 
-    const handleEmojiSelect = (emoji) => {
-        setInput(prevInput => prevInput + emoji);
+    const handleEmojiSelect = useCallback((emoji) => {
+        setInput(prev => prev + emoji);
         setTimeout(() => inputRef.current?.focus(), 0);
-    };
+    }, [setInput]);
 
     const handleKeyDown = (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -57,150 +72,159 @@ export const ChatInput = ({
 
     const isVerified = currentUser?.emailVerified;
     const isDisabled = !isVerified || !input.trim();
+    const needsDisplayName = getDefaultName?.(currentUser?.email) === currentDisplayName && !selectedChatPartner && isVerified;
+
     const placeholder = !isVerified 
-        ? "Verify your email..."
+        ? '✉️ Verify your email to chat...'
         : selectedChatPartner 
-            ? `Message @${selectedChatPartner.displayName}` 
-            : "Message Global Chat";
+            ? `Message ${selectedChatPartner.displayName}…` 
+            : 'Message everyone…';
+
+    // Bottom offset from visualViewport (pushes input above keyboard)
+    const bottomStyle = visualViewportHeight
+        ? { bottom: visualViewportHeight.bottom, position: 'fixed', left: 0, right: 0, zIndex: 100 }
+        : {};
 
     return (
         <>
-            {/* Emoji Picker - Above input */}
+            {/* Emoji picker floats above input */}
             {showEmojiPicker && (
-                <div className="fixed bottom-20 left-0 right-0 mx-4 z-50 md:absolute md:bottom-full md:mb-2">
-                    <div className="max-w-md mx-auto">
-                        <EmojiPicker 
-                            onEmojiSelect={handleEmojiSelect} 
+                <div
+                    style={visualViewportHeight
+                        ? { position: 'fixed', bottom: (visualViewportHeight.bottom + 64), left: 0, right: 0, zIndex: 110 }
+                        : { position: 'absolute', bottom: '100%', left: 0, right: 0, zIndex: 110, marginBottom: 8 }
+                    }
+                    className="px-3"
+                >
+                    <div className="max-w-lg mx-auto">
+                        <EmojiPicker
+                            onEmojiSelect={handleEmojiSelect}
                             onClose={() => setShowEmojiPicker(false)}
                         />
                     </div>
                 </div>
             )}
 
-            {/* Input Form - Fixed at bottom with keyboard handling */}
-            <div 
-                className={`
-                    sticky bottom-0 bg-[#0A0A0A] border-t border-white/5
-                    transition-transform duration-300
-                    ${keyboardVisible ? 'translate-y-0' : 'translate-y-0'}
-                `}
-                style={{
-                    paddingBottom: keyboardVisible ? '0' : 'env(safe-area-inset-bottom)'
-                }}
+            {/* ── Input bar – fixed above keyboard ────────────────────────────── */}
+            <div
+                ref={wrapperRef}
+                className="nexchat-input-bar"
+                style={bottomStyle}
             >
-                {/* Warning Messages */}
+                {/* Warning banners */}
                 {currentUser && !isVerified && (
-                    <div className="px-4 pt-2">
-                        <div className="flex items-center gap-2 p-2.5 bg-red-500/10 rounded-lg border border-red-500/20">
-                            <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-                            <p className="text-xs text-red-400 flex-1">
-                                Verify your email to start chatting
-                            </p>
-                            <button className="text-xs text-red-400 hover:text-red-300 font-medium">
-                                Resend
-                            </button>
+                    <div className="px-3 pt-2">
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse flex-shrink-0" />
+                            <p className="text-xs text-amber-400 flex-1">Verify your email to start chatting</p>
+                            <button className="text-xs text-amber-400 font-semibold hover:text-amber-300 transition-colors">Resend</button>
                         </div>
                     </div>
                 )}
-
-                {getDefaultName(currentUser?.email) === currentDisplayName && !selectedChatPartner && isVerified && (
-                    <div className="px-4 pt-2">
-                        <div 
+                {needsDisplayName && (
+                    <div className="px-3 pt-2">
+                        <button
                             onClick={() => setShowSettingsModal?.(true)}
-                            className="flex items-center gap-2 p-2.5 bg-purple-500/10 rounded-lg border border-purple-500/20 cursor-pointer hover:bg-purple-500/20 transition-colors"
+                            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-violet-500/10 border border-violet-500/20 hover:bg-violet-500/15 transition-colors"
                         >
-                            <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse" />
-                            <p className="text-xs text-purple-400 flex-1">
-                                Set a display name to start chatting
-                            </p>
-                            <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse flex-shrink-0" />
+                            <p className="text-xs text-violet-400 flex-1 text-left">Set your display name to send messages</p>
+                            <svg className="w-3.5 h-3.5 text-violet-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                             </svg>
-                        </div>
+                        </button>
                     </div>
                 )}
 
-                {/* Input Form */}
-                <form 
+                {/* Main input row */}
+                <form
                     ref={formRef}
-                    onSubmit={handleSend} 
-                    className="flex items-center gap-2 p-2"
+                    onSubmit={handleSend}
+                    className="flex items-end gap-2 px-3 py-2.5"
                 >
-                    {/* Emoji Button */}
+                    {/* Emoji button */}
                     <button
                         type="button"
-                        onClick={() => setShowEmojiPicker(prev => !prev)}
+                        onClick={() => setShowEmojiPicker(p => !p)}
                         disabled={!isVerified}
                         className={`
-                            w-10 h-10 flex items-center justify-center rounded-full transition-all flex-shrink-0
-                            ${showEmojiPicker 
-                                ? 'text-purple-400 bg-purple-500/10' 
-                                : 'text-gray-400 hover:text-white hover:bg-white/5'
-                            }
-                            disabled:opacity-50
+                            nexchat-icon-btn flex-shrink-0 mb-0.5
+                            ${showEmojiPicker ? 'text-violet-400 bg-violet-500/15' : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'}
+                            disabled:opacity-30 disabled:cursor-not-allowed
                         `}
+                        aria-label="Emoji"
                     >
-                        <span className="text-xl">😊</span>
+                        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <circle cx="12" cy="12" r="10" strokeWidth="1.8"/>
+                            <path strokeLinecap="round" strokeWidth="1.8" d="M8 13s1.5 2.5 4 2.5 4-2.5 4-2.5"/>
+                            <circle cx="9" cy="9.5" r="0.8" fill="currentColor" stroke="none"/>
+                            <circle cx="15" cy="9.5" r="0.8" fill="currentColor" stroke="none"/>
+                        </svg>
                     </button>
 
-                    {/* Input Field */}
-                    <div className="flex-1 relative">
+                    {/* Text input – pill shaped like WhatsApp */}
+                    <div className={`
+                        flex-1 relative flex items-center
+                        bg-[#1E1E1E] rounded-3xl border
+                        transition-all duration-200
+                        ${isFocused ? 'border-violet-500/60 shadow-[0_0_0_3px_rgba(139,92,246,0.08)]' : 'border-white/[0.06]'}
+                    `}>
                         <input
                             ref={inputRef}
                             type="text"
                             value={input}
-                            onChange={(e) => setInput(e.target.value)}
+                            onChange={e => setInput(e.target.value)}
                             onKeyDown={handleKeyDown}
                             onFocus={() => setIsFocused(true)}
                             onBlur={() => setIsFocused(false)}
                             placeholder={placeholder}
                             disabled={!isVerified}
-                            className={`
-                                w-full px-4 py-2.5 bg-[#1A1A1A] rounded-full text-white placeholder-gray-500
-                                focus:outline-none transition-all
-                                ${isFocused ? 'ring-2 ring-purple-500/30' : ''}
-                                disabled:opacity-50 disabled:cursor-not-allowed
-                                ${keyboardVisible ? 'text-base' : 'text-sm'} /* Prevent zoom on mobile */
-                            `}
                             autoComplete="off"
-                            style={{ fontSize: '16px' }} /* Prevents zoom on iOS */
+                            autoCorrect="on"
+                            enterKeyHint="send"
+                            style={{ fontSize: '16px' /* prevents iOS zoom */ }}
+                            className="
+                                flex-1 min-w-0 bg-transparent text-[15px] text-white
+                                placeholder-gray-600 px-4 py-2.5
+                                focus:outline-none disabled:opacity-30
+                                disabled:cursor-not-allowed
+                            "
                         />
-
-                        {/* Character count */}
                         {input.length > 0 && (
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                            <span className="absolute right-3.5 text-[11px] text-gray-600 tabular-nums select-none">
                                 {input.length}
                             </span>
                         )}
                     </div>
 
-                    {/* Send Button */}
-                    <button
-                        type="submit"
-                        disabled={isDisabled}
-                        className={`
-                            w-10 h-10 flex items-center justify-center rounded-full transition-all flex-shrink-0
-                            ${!isDisabled 
-                                ? 'bg-purple-500 text-white hover:bg-purple-600 active:scale-95' 
-                                : 'bg-gray-700 text-gray-400 cursor-not-allowed'
-                            }
-                        `}
-                    >
-                        <svg 
-                            className="w-5 h-5" 
-                            fill="none" 
-                            stroke="currentColor" 
-                            viewBox="0 0 24 24"
+                    {/* Send / Mic button */}
+                    {input.trim() ? (
+                        <button
+                            type="submit"
+                            disabled={isDisabled}
+                            className="nexchat-send-btn flex-shrink-0 mb-0.5"
+                            aria-label="Send"
                         >
-                            <path 
-                                strokeLinecap="round" 
-                                strokeLinejoin="round" 
-                                strokeWidth={2} 
-                                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" 
-                            />
-                        </svg>
-                    </button>
+                            <svg className="w-5 h-5 translate-x-0.5 -translate-y-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                            </svg>
+                        </button>
+                    ) : (
+                        <button
+                            type="button"
+                            disabled={!isVerified}
+                            className="nexchat-icon-btn text-gray-400 hover:text-gray-200 hover:bg-white/5 flex-shrink-0 mb-0.5 disabled:opacity-30"
+                            aria-label="Voice message"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
+                            </svg>
+                        </button>
+                    )}
                 </form>
+
+                {/* Safe-area spacer for iOS home indicator */}
+                <div style={{ height: 'env(safe-area-inset-bottom, 0px)', backgroundColor: 'inherit' }} />
             </div>
         </>
     );

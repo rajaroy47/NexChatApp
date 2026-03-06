@@ -1,335 +1,300 @@
 import React, { useCallback, useState, useRef, useEffect } from 'react';
 import { ADMIN_EMAIL } from '../../firebase/config';
 import { getDefaultName } from '../../firebase/db';
-import Avatar from '../common/Avatar';
 import AdminBadge from '../common/AdminBadge';
 
-const formatLastSeen = (timestamp) => {
-    if (!timestamp) return '';
-    const diff = Math.floor((Date.now() - timestamp) / 1000);
-    if (diff < 60) return 'active now';
-    const m = Math.floor(diff / 60);
-    if (m < 60) return `active ${m}m ago`;
+const isAdmin = (email) => email?.toLowerCase() === ADMIN_EMAIL?.toLowerCase();
+
+const formatLastSeen = (ts) => {
+    if (!ts) return '';
+    const s = Math.floor((Date.now() - ts) / 1000);
+    if (s < 60) return 'just now';
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m}m ago`;
     const h = Math.floor(m / 60);
-    if (h < 24) return `active ${h}h ago`;
-    const d = Math.floor(h / 24);
-    if (d < 7) return `active ${d}d ago`;
-    return `active ${Math.floor(d / 7)}w ago`;
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
 };
 
-const isAdmin = (email) => email && email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+// Colour derived from name – same logic as Message.jsx
+const getColor = (name = '') => {
+    const p = [
+        ['#7C3AED', '#A78BFA'],
+        ['#2563EB', '#60A5FA'],
+        ['#059669', '#34D399'],
+        ['#D97706', '#FCD34D'],
+        ['#DB2777', '#F9A8D4'],
+        ['#DC2626', '#FCA5A5'],
+        ['#0891B2', '#67E8F9'],
+        ['#7C2D12', '#FCA5A5'],
+    ];
+    let h = 0;
+    for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
+    return p[Math.abs(h) % p.length];
+};
 
-export const UserList = ({ 
-    allRegisteredUsers, 
-    selectedChatPartner, 
-    setSelectedChatPartner, 
-    setShowUsers, 
+const UserAvatar = ({ name, size = 'md', online }) => {
+    const [from, to] = getColor(name);
+    const sz = size === 'lg' ? 'w-11 h-11 text-sm' : size === 'sm' ? 'w-8 h-8 text-[11px]' : 'w-10 h-10 text-[13px]';
+    const dotSz = size === 'lg' ? 'w-3.5 h-3.5' : 'w-3 h-3';
+    return (
+        <div className="relative flex-shrink-0">
+            <div
+                className={`${sz} rounded-full flex items-center justify-center font-bold text-white select-none shadow-sm`}
+                style={{ background: `linear-gradient(135deg, ${from}, ${to})` }}
+            >
+                {(name || '?').charAt(0).toUpperCase()}
+            </div>
+            {online !== undefined && (
+                <span className={`
+                    absolute -bottom-[1px] -right-[1px] ${dotSz} rounded-full border-[2px] border-[#0c0c0c]
+                    ${online ? 'bg-emerald-500' : 'bg-gray-600'}
+                `} />
+            )}
+        </div>
+    );
+};
+
+export const UserList = ({
+    allRegisteredUsers,
+    selectedChatPartner,
+    setSelectedChatPartner,
+    setShowUsers,
     currentUser,
     usersCache,
-    showUsers
+    showUsers,
 }) => {
-    const [searchTerm, setSearchTerm] = useState('');
-    const [showCurrentUserMenu, setShowCurrentUserMenu] = useState(false);
-    const userListRef = useRef(null);
-    const currentUserRef = useRef(null);
-    
-    // Get current user info
-    const currentUserInfo = usersCache[currentUser?.uid];
-    const currentDisplayName = currentUserInfo?.displayName || getDefaultName(currentUser?.email);
-    const isClientAdmin = isAdmin(currentUser?.email);
+    const [search, setSearch] = useState('');
+    const currentInfo = usersCache?.[currentUser?.uid];
+    const myName = currentInfo?.displayName || getDefaultName(currentUser?.email);
 
-    // Filter out current user from the list
-    const otherUsers = allRegisteredUsers.filter(user => user.id !== currentUser?.uid);
-
-    // Filter users based on search
-    const filteredUsers = otherUsers.filter(user => 
-        user.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    const others = allRegisteredUsers.filter(u => u.id !== currentUser?.uid);
+    const filtered = others.filter(u =>
+        !search || u.displayName?.toLowerCase().includes(search.toLowerCase()) || u.email?.toLowerCase().includes(search.toLowerCase())
     );
-
-    // Sort users: online first, then by last active
-    const sortedUsers = [...filteredUsers].sort((a, b) => {
+    const sorted = [...filtered].sort((a, b) => {
         if (a.state === 'online' && b.state !== 'online') return -1;
-        if (a.state !== 'online' && b.state === 'online') return 1;
+        if (b.state === 'online' && a.state !== 'online') return 1;
         return (b.lastChanged || 0) - (a.lastChanged || 0);
     });
 
-    // Calculate online count
-    const onlineCount = otherUsers.filter(u => u.state === 'online').length;
+    const onlineCount = others.filter(u => u.state === 'online').length;
 
-    // Handle click outside current user menu
-    useEffect(() => {
-        const handleClickOutside = (e) => {
-            if (currentUserRef.current && !currentUserRef.current.contains(e.target)) {
-                setShowCurrentUserMenu(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    const getFullUserList = useCallback(() => {
-        // Global Chat Option - Enhanced Instagram style
-        const globalChatButton = (
-            <button
-                key="global-chat-btn"
-                onClick={() => {
-                    setSelectedChatPartner(null);
-                    setShowUsers(false); 
-                }}
-                className={`
-                    w-full flex items-center gap-3 p-3 rounded-xl transition-all mb-3
-                    ${selectedChatPartner === null 
-                        ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30' 
-                        : 'hover:bg-white/5 border border-transparent'
-                    }
-                    group relative overflow-hidden
-                `}
-            >
-                {/* Hover effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 to-pink-500/0 group-hover:from-purple-500/5 group-hover:to-pink-500/5 transition-all duration-500" />
-                
-                {/* Icon with gradient */}
-                <div className="relative">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
-                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
-                        </svg>
-                    </div>
-                    {/* Live indicator */}
-                    <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-[#0C0C0C] animate-pulse" />
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 text-left">
-                    <p className={`text-sm font-semibold ${selectedChatPartner === null ? 'text-white' : 'text-gray-300'}`}>
-                        Global Chat
-                    </p>
-                    <div className="flex items-center gap-2 text-xs">
-                        <span className="text-gray-500">{onlineCount} online</span>
-                        <span className="w-1 h-1 bg-gray-600 rounded-full" />
-                        <span className="text-gray-500">{otherUsers.length} members</span>
-                    </div>
-                </div>
-
-                {/* Active indicator */}
-                {selectedChatPartner === null && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-purple-500 to-pink-500 rounded-r-full" />
-                )}
-            </button>
-        );
-
-        // User List Items - Enhanced Instagram style
-        const userListItems = sortedUsers.map((info) => {
-            const isSelected = selectedChatPartner?.id === info.id;
-            const isOnline = info.state === 'online';
-            const isUserAdmin = isAdmin(info.email); 
-            const lastSeen = info.lastChanged ? formatLastSeen(info.lastChanged) : '';
-
-            return (
-                <div 
-                    key={info.id} 
-                    onClick={() => {
-                        setSelectedChatPartner(info);
-                        setShowUsers(false); 
-                    }}
-                    className={`
-                        relative flex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer
-                        ${isSelected 
-                            ? 'bg-purple-500/20 border border-purple-500/30' 
-                            : 'hover:bg-white/5 border border-transparent'
-                        }
-                        group
-                    `}
-                >
-                    {/* Avatar with Status - Enhanced */}
-                    <div className="relative">
-                        <Avatar user={info} size="md" />
-                        {isOnline ? (
-                            <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-[#0C0C0C] animate-pulse" />
-                        ) : (
-                            <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-gray-500 rounded-full border-2 border-[#0C0C0C]" />
-                        )}
-                    </div>
-
-                    {/* User Info */}
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1">
-                            <p className="text-sm font-medium text-white truncate group-hover:text-purple-400 transition-colors">
-                                {info.displayName}
-                            </p>
-                            {isUserAdmin && <AdminBadge size="sm" />}
-                        </div>
-                        <p className="text-xs text-gray-500">
-                            {isOnline ? (
-                                <span className="text-green-400">Active now</span>
-                            ) : (
-                                lastSeen
-                            )}
-                        </p>
-                    </div>
-
-                    {/* Active indicator for selected user */}
-                    {isSelected && (
-                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-purple-500 rounded-r-full" />
-                    )}
-
-                    {/* Unread indicator (demo) - you can replace with actual unread count */}
-                    {Math.random() > 0.8 && (
-                        <span className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" />
-                    )}
-                </div>
-            );
-        });
-
-        return [globalChatButton, ...userListItems];
-    }, [sortedUsers, selectedChatPartner, setSelectedChatPartner, setShowUsers, onlineCount, otherUsers.length]);
+    const pick = useCallback((user) => {
+        setSelectedChatPartner(user);
+        setShowUsers(false);
+    }, [setSelectedChatPartner, setShowUsers]);
 
     return (
         <>
-            {/* Mobile Backdrop - Enhanced */}
+            {/* Mobile backdrop */}
             {showUsers && (
-                <div 
-                    className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 md:hidden animate-fade-in"
+                <div
+                    className="fixed inset-0 bg-black/70 backdrop-blur-[2px] z-40 md:hidden"
                     onClick={() => setShowUsers(false)}
                 />
             )}
 
-            {/* User List Panel - Enhanced Instagram style sidebar */}
-            <div className={`
-                fixed md:static inset-y-0 left-0 z-50 w-80 bg-[#0C0C0C] 
+            {/* ── Sidebar panel ──────────────────────────────────────────────────── */}
+            <aside className={`
+                fixed md:static inset-y-0 left-0 z-50
+                w-[300px] md:w-[280px] lg:w-[300px]
+                flex flex-col
+                bg-[#0c0c0c] border-r border-white/[0.05]
                 transform transition-transform duration-300 ease-out
-                ${showUsers ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-                flex flex-col border-r border-white/5
+                ${showUsers ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'}
             `}>
-                {/* Header - Fixed at top */}
-                <div className="sticky top-0 bg-[#0C0C0C] z-20 border-b border-white/5">
-                    <div className="flex items-center justify-between p-4">
-                        <div className="flex items-center gap-3">
-                            <div className="w-2 h-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full animate-pulse" />
-                            <h2 className="text-lg font-semibold text-white">Messages</h2>
-                            <span className="px-2 py-0.5 text-xs bg-white/5 rounded-full text-gray-400">
-                                {otherUsers.length}
-                            </span>
+
+                {/* ── Top header ──────────────────────────────────────────────────── */}
+                <div className="flex-shrink-0 px-4 pt-5 pb-3 border-b border-white/[0.04]">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2.5">
+                            <div className="relative">
+                                <svg className="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+                                        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                </svg>
+                            </div>
+                            <h2 className="text-[17px] font-semibold text-white tracking-[-0.3px]">Chats</h2>
                         </div>
-                        <button 
-                            onClick={() => setShowUsers(false)} 
-                            className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/5 transition-colors"
-                        >
-                            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
+                        <div className="flex items-center gap-1">
+                            {onlineCount > 0 && (
+                                <span className="flex items-center gap-1 text-[11px] text-emerald-500 font-medium bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                                    {onlineCount} online
+                                </span>
+                            )}
+                            <button
+                                onClick={() => setShowUsers(false)}
+                                className="md:hidden w-8 h-8 ml-1 rounded-full flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/5 transition-colors"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
 
-                    {/* Search Bar - Enhanced */}
-                    <div className="p-4 pt-0">
-                        <div className="relative group">
-                            <input
-                                type="text"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                placeholder="Search conversations..."
-                                className="w-full px-4 py-2.5 pl-10 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-all"
-                            />
-                            <svg className="absolute left-3 top-2.5 w-4 h-4 text-gray-500 group-focus-within:text-purple-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                            
-                            {/* Clear search button */}
-                            {searchTerm && (
-                                <button
-                                    onClick={() => setSearchTerm('')}
-                                    className="absolute right-3 top-2.5 text-gray-500 hover:text-white"
-                                >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
-                            )}
-                        </div>
+                    {/* Search bar */}
+                    <div className="relative">
+                        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <input
+                            type="search"
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            placeholder="Search"
+                            style={{ fontSize: '16px' }}
+                            className="
+                                w-full pl-9 pr-4 py-2 rounded-xl
+                                bg-[#1a1a1a] text-[14px] text-white
+                                placeholder-gray-600
+                                border border-white/[0.06]
+                                focus:outline-none focus:border-violet-500/40 focus:bg-[#202020]
+                                transition-all
+                            "
+                        />
+                        {search && (
+                            <button
+                                onClick={() => setSearch('')}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
+                            >
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        )}
                     </div>
                 </div>
 
-                {/* User List - Scrollable area (only this scrolls) */}
-                <div 
-                    ref={userListRef}
-                    className="flex-1 overflow-y-auto custom-scrollbar"
-                >
-                    <div className="px-2 py-2 space-y-1">
-                        {getFullUserList()}
-                        
-                        {/* No results message */}
-                        {sortedUsers.length === 0 && searchTerm && (
-                            <div className="text-center py-8">
-                                <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-white/5 flex items-center justify-center">
-                                    <svg className="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {/* ── Scrollable list ──────────────────────────────────────────────── */}
+                <div className="flex-1 overflow-y-auto nexchat-scrollbar py-1">
+
+                    {/* Global Chat row */}
+                    <div className="px-2 pt-1 pb-0.5">
+                        <button
+                            onClick={() => pick(null)}
+                            className={`
+                                w-full flex items-center gap-3 px-3 py-3 rounded-2xl transition-all duration-150 text-left
+                                ${selectedChatPartner === null
+                                    ? 'bg-violet-600/15 ring-1 ring-violet-500/25'
+                                    : 'hover:bg-white/[0.04] active:bg-white/[0.07]'
+                                }
+                            `}
+                        >
+                            {/* Globe icon with gradient bg */}
+                            <div className="relative w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-violet-600 to-pink-600 shadow-md">
+                                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+                                        d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-[#0c0c0c] animate-pulse" />
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between mb-0.5">
+                                    <span className={`text-[14px] font-semibold leading-tight ${selectedChatPartner === null ? 'text-white' : 'text-gray-200'}`}>
+                                        Global Chat
+                                    </span>
+                                    <span className="text-[11px] text-gray-600 flex-shrink-0">live</span>
+                                </div>
+                                <p className="text-[12px] text-gray-500 truncate">
+                                    {onlineCount} online · {others.length} members
+                                </p>
+                            </div>
+                        </button>
+                    </div>
+
+                    {/* Section divider */}
+                    {sorted.length > 0 && (
+                        <div className="px-5 py-2 mt-1">
+                            <span className="text-[11px] font-semibold text-gray-600 uppercase tracking-[0.8px]">
+                                Direct Messages
+                            </span>
+                        </div>
+                    )}
+
+                    {/* User rows */}
+                    <div className="px-2 space-y-0.5">
+                        {sorted.map(user => {
+                            const selected = selectedChatPartner?.id === user.id;
+                            const online = user.state === 'online';
+                            const admin = isAdmin(user.email);
+                            return (
+                                <button
+                                    key={user.id}
+                                    onClick={() => pick(user)}
+                                    className={`
+                                        w-full flex items-center gap-3 px-3 py-[11px] rounded-2xl transition-all duration-150 text-left
+                                        ${selected
+                                            ? 'bg-violet-600/15 ring-1 ring-violet-500/25'
+                                            : 'hover:bg-white/[0.04] active:bg-white/[0.07]'
+                                        }
+                                    `}
+                                >
+                                    <UserAvatar name={user.displayName} online={online} size="md" />
+
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center justify-between mb-[2px]">
+                                            <div className="flex items-center gap-1.5 min-w-0">
+                                                <span className={`text-[14px] font-medium truncate leading-tight ${selected ? 'text-white' : 'text-gray-200'}`}>
+                                                    {user.displayName}
+                                                </span>
+                                                {admin && <AdminBadge />}
+                                            </div>
+                                            <span className="text-[11px] text-gray-600 flex-shrink-0 ml-1">
+                                                {online ? '' : formatLastSeen(user.lastChanged)}
+                                            </span>
+                                        </div>
+                                        <p className={`text-[12px] truncate ${online ? 'text-emerald-500' : 'text-gray-600'}`}>
+                                            {online ? 'Active now' : 'Tap to message'}
+                                        </p>
+                                    </div>
+                                </button>
+                            );
+                        })}
+
+                        {/* Empty search */}
+                        {sorted.length === 0 && search && (
+                            <div className="py-12 text-center">
+                                <div className="w-12 h-12 rounded-full bg-white/5 mx-auto mb-3 flex items-center justify-center">
+                                    <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                     </svg>
                                 </div>
-                                <p className="text-sm text-gray-500">No users found</p>
-                                <p className="text-xs text-gray-600 mt-1">Try a different search term</p>
+                                <p className="text-[13px] text-gray-500">No results for "{search}"</p>
+                            </div>
+                        )}
+
+                        {/* Empty no users */}
+                        {sorted.length === 0 && !search && (
+                            <div className="py-12 text-center">
+                                <p className="text-[13px] text-gray-600">No other users yet</p>
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* Current User - Fixed at bottom with enhanced design */}
-                <div 
-                    ref={currentUserRef}
-                    className="relative bg-[#0C0C0C] border-t border-white/5"
-                >
-                    {/* Current user button */}
-                    <button
-                        onClick={() => setShowCurrentUserMenu(!showCurrentUserMenu)}
-                        className="w-full p-4 flex items-center gap-3 hover:bg-white/5 transition-colors"
-                    >
-                        <div className="relative">
-                            <Avatar user={{ displayName: currentDisplayName }} size="sm" />
-                            <span className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-[#0C0C0C] animate-pulse" />
+                {/* ── Current user footer ─────────────────────────────────────────── */}
+                <div className="flex-shrink-0 border-t border-white/[0.05] px-3 py-3">
+                    <div className="flex items-center gap-3 px-2">
+                        <UserAvatar name={myName} online={true} size="sm" />
+                        <div className="flex-1 min-w-0">
+                            <p className="text-[13px] font-medium text-white truncate leading-tight">{myName}</p>
+                            <p className="text-[11px] text-emerald-500 leading-tight">You · Active</p>
                         </div>
-                        <div className="flex-1 min-w-0 text-left">
-                            <p className="text-sm font-medium text-white truncate">
-                                {currentDisplayName}
-                            </p>
-                            <p className="text-xs text-gray-500 truncate">
-                                {currentUser?.email}
-                            </p>
-                        </div>
-                        
-                        {/* Menu toggle icon */}
-                        <svg 
-                            className={`w-4 h-4 text-gray-500 transition-transform duration-300 ${showCurrentUserMenu ? 'rotate-180' : ''}`} 
-                            fill="none" 
-                            stroke="currentColor" 
-                            viewBox="0 0 24 24"
-                        >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </button>
-
-                    {/* Current user menu (optional) */}
-                    {showCurrentUserMenu && (
-                        <div className="absolute bottom-full left-0 right-0 mb-2 mx-2 bg-[#1A1A1A] rounded-xl border border-white/5 shadow-xl overflow-hidden animate-slide-in-up">
-                            <div className="p-2 space-y-1">
-                                <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-white/5 rounded-lg transition-colors">
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                    </svg>
-                                    <span>Profile</span>
-                                </button>
-                                <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-white/5 rounded-lg transition-colors">
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                    <span>Settings</span>
-                                </button>
+                        {/* Verified badge */}
+                        {currentUser?.emailVerified && (
+                            <div className="flex-shrink-0">
+                                <svg className="w-4 h-4 text-violet-400" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                                </svg>
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
-            </div>
+            </aside>
         </>
     );
 };
