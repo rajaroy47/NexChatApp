@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
+import logo from "../assets/images/nexchat.png";
 
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -56,7 +57,7 @@ const Navbar = () => {
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl blur-md opacity-0 group-hover:opacity-70 transition-opacity duration-500" />
                 <div className="relative w-9 h-9 rounded-xl overflow-hidden ring-2 ring-white/10 group-hover:ring-purple-500/50 transition-all duration-300">
                   <img 
-                    src="/nexchat.png" 
+                    src={logo} 
                     alt="NexChat" 
                     className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
                   />
