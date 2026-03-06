@@ -25,8 +25,8 @@ export const Message = ({
     currentUser, 
     selectedChatPartner, 
     chatId,
-    showAvatar = true,
-    isConsecutive = false 
+    showAvatar = true,        // ✅ Default to true
+    isConsecutive = false      // ✅ Default to false
 }) => { 
     const [showActions, setShowActions] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -70,10 +70,15 @@ export const Message = ({
             >
                 {/* Avatar Column - WhatsApp style */}
                 <div className="flex-shrink-0 w-9">
-                    {!isMyMessage && showAvatar && (
+                    {!isMyMessage && showAvatar && (   // ✅ Only show avatar if showAvatar is true
                         <Avatar user={{ displayName: senderDisplay }} size="sm" />
                     )}
                 </div>
+
+                {/* Spacer for consecutive messages without avatar */}
+                {!isMyMessage && !showAvatar && (
+                    <div className="w-9 flex-shrink-0" /> // ✅ Add spacer to maintain alignment
+                )}
 
                 {/* Message Content */}
                 <div className={`flex flex-col max-w-[65%] ${isMyMessage ? 'items-end' : 'items-start'}`}>
@@ -125,7 +130,7 @@ export const Message = ({
                             </div>
                         </div>
 
-                        {/* Message Tail - WhatsApp style */}
+                        {/* Message Tail - WhatsApp style (only for first message) */}
                         {!isConsecutive && (
                             <div className={`
                                 absolute top-0 w-3 h-3
@@ -148,6 +153,13 @@ export const Message = ({
                         </div>
                     )}
                 </div>
+
+                {/* Avatar for own messages - only for first in group */}
+                {isMyMessage && showAvatar && (   // ✅ Only show avatar for first own message
+                    <div className="flex-shrink-0 ml-2">
+                        <Avatar user={{ displayName: senderDisplay }} size="sm" />
+                    </div>
+                )}
             </div>
 
             {/* Delete Confirmation Modal */}
