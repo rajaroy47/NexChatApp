@@ -105,7 +105,7 @@ export const AuthScreen = () => {
                     <div className="flex items-center justify-center space-x-3 mb-3">
                         <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center">
                           <img
-                            src="/nexchat.png"
+                            src="https://res.cloudinary.com/dys8on0yh/image/upload/v1772786485/nexchat_zvxgkf.png"
                             alt="NexChat Logo"
                             className="w-full h-full object-cover animate-pulse"
                           />
