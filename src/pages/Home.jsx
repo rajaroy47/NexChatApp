@@ -190,7 +190,7 @@ const Home = () => {
               No credit card required. No commitment. Just pure, instant connection.
             </p>
             <Link
-              to="/signup"
+              to="/register"
               className="inline-flex items-center gap-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold px-10 py-4 rounded-2xl transition-all duration-300 shadow-lg shadow-purple-500/25 hover:shadow-xl hover:shadow-purple-500/35"
             >
               <span>Get Started Free</span>
