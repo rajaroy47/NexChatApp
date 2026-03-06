@@ -58,7 +58,7 @@ const Home = () => {
         <div className="absolute bottom-0 left-1/3 w-[400px] h-[400px] bg-pink-600/20 rounded-full mix-blend-multiply filter blur-[128px] animate-pulse animation-delay-4000" />
         
         {/* Subtle Grid Pattern */}
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%239C92AC" fill-opacity="0.02"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20" />
+        <div className={`absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%239C92AC" fill-opacity="0.02"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20`} />
       </div>
 
       {/* Hero Section */}
@@ -178,8 +178,9 @@ const Home = () => {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
         <div className="relative overflow-hidden rounded-[2rem] sm:rounded-[3rem] bg-gradient-to-br from-purple-600/20 via-transparent to-blue-600/20 border border-white/10 p-12 sm:p-20 text-center">
           {/* Background Pattern */}
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="%239C92AC" fill-opacity="0.05"%3E%3Cpath d="M0 0h20v20H0V0zm10 10h10v10H10V10zM0 10h10v10H0V10z"/%3E%3C/g%3E%3C/svg%3E')] opacity-30" />
-          
+          <div className={`absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="%239C92AC" fill-opacity="0.05"%3E%3Cpath d="M0 0h20v20H0V0zm10 10h10v10H10V10zM0 10h10v10H0V10z"/%3E%3C/g%3E%3C/svg%3E')] opacity-30` } />
+
+
           <div className="relative z-10">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6">
               Ready to transform your communication?
