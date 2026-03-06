@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://nexchat.vercel.app/sitemap.xml
+Sitemap: https://nex-chat-app-sable.vercel.app/sitemap.xml
