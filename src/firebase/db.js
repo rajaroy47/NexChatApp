@@ -32,16 +32,34 @@ export const updateOnlineStatus = (uid, email, isOnline) => {
     }
 };
 
+// export const sendMessage = (uid, displayName, message) => {
+//     if (!displayName || !message.trim()) return;
+
+//     return push(ref(db, "messages"), {
+//         uid,
+//         displayName, 
+//         message: message.trim(),
+//         timestamp: Date.now(),
+//     });
+// };
+
+
+// global send message code -------
 export const sendMessage = (uid, displayName, message) => {
-    if (!displayName || !message.trim()) return;
+    const text = message.trim();
+    if (!displayName || !text) return;
 
     return push(ref(db, "messages"), {
-        uid,
-        displayName, 
-        message: message.trim(),
+        senderUid: uid,
+        senderDisplayName: displayName,
+        message: text,
         timestamp: Date.now(),
+        status: "sent"
     });
 };
+
+
+
 
 
 /*
@@ -68,6 +86,7 @@ export const sendPrivateMessage = (senderUid, senderDisplayName, receiverUid, me
 };
 */
 
+// private send message code ------
 export const sendPrivateMessage = (senderUid, senderDisplayName, receiverUid, message) => {
     const text = message.trim();
     if (!text || !senderUid || !receiverUid) return;
