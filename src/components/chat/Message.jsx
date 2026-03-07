@@ -9,6 +9,39 @@ const formatTime = (ts) => {
   return new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).replace(' ', '\u202f');
 };
 
+
+const renderMessageStatus = (status) => {
+
+  if (!status || status === "sent") {
+    return (
+      <svg className="w-[14px] h-[14px] opacity-70" viewBox="0 0 16 11" fill="none">
+        <path d="M1 6l4 4L9 1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    );
+  }
+
+  if (status === "delivered") {
+    return (
+      <svg className="w-[14px] h-[14px] opacity-70" viewBox="0 0 16 11" fill="none">
+        <path d="M1 6l4 4L9 1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M5 6l4 4L15 1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    );
+  }
+
+  if (status === "read") {
+    return (
+      <svg className="w-[14px] h-[14px] text-blue-400" viewBox="0 0 16 11" fill="none">
+        <path d="M1 6l4 4L9 1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M5 6l4 4L15 1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    );
+  }
+
+};
+
+
+
 const isAdmin = (uid) => uid === ADMIN_UID;
 
 const getAvatarColor = (name = '') => {
@@ -188,12 +221,7 @@ export const Message = ({
             {/* Time + tick */}
             <div className="absolute bottom-[7px] right-[10px] flex items-center gap-1 pointer-events-none">
               <span className="text-[11px] leading-none whitespace-nowrap opacity-60">{time}</span>
-              {isMyMessage && (
-                <svg className="w-[14px] h-[14px] opacity-70 flex-shrink-0" viewBox="0 0 16 11" fill="none">
-                  <path d="M1 6l4 4L15 1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M5 6l4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" opacity="0.6"/>
-                </svg>
-              )}
+              {isMyMessage && renderMessageStatus(message.status)}
             </div>
 
             {/* Delete button - Now with its own hover area */}
