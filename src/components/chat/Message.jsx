@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ADMIN_UID } from '../../firebase/config';
 import { getDefaultName } from '../../firebase/db';
 import { deleteMessage, deletePrivateMessage } from '../../firebase/db';
@@ -47,7 +47,19 @@ export const Message = ({
   const [showMenu, setShowMenu] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const longPressTimer = useRef(null);
+  const hoverTimerRef = useRef(null);
+  const menuRef = useRef(null);
+  const buttonRef = useRef(null);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const senderUid = message.senderUid || message.uid;
   const senderInfo = usersCache?.[senderUid];
@@ -55,11 +67,68 @@ export const Message = ({
   const fromAdmin = isAdmin(senderUid);
   const time = formatTime(message.timestamp);
 
+  // Handle mouse enter with delay
+  const handleMouseEnter = () => {
+    if (!isMyMessage || isMobile) return;
+    
+    // Clear any existing hide timer
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+    
+    // Show menu immediately
+    setShowMenu(true);
+  };
+
+  // Handle mouse leave with delay to allow moving to delete button
+  const handleMouseLeave = () => {
+    if (!isMyMessage || isMobile) return;
+    
+    // Don't hide immediately - wait to see if mouse goes to delete button
+    hoverTimerRef.current = setTimeout(() => {
+      // Check if mouse is over the delete button
+      if (buttonRef.current && !buttonRef.current.matches(':hover')) {
+        setShowMenu(false);
+      }
+    }, 300); // 300ms delay before hiding
+  };
+
+  // Handle delete button mouse enter - cancel hide timer
+  const handleButtonMouseEnter = () => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+  };
+
+  // Handle delete button mouse leave - start hide timer
+  const handleButtonMouseLeave = () => {
+    hoverTimerRef.current = setTimeout(() => {
+      setShowMenu(false);
+    }, 200);
+  };
+
+  // Clean up timers on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimerRef.current) {
+        clearTimeout(hoverTimerRef.current);
+      }
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+      }
+    };
+  }, []);
+
   const onTouchStart = () => {
     if (!isMyMessage) return;
     longPressTimer.current = setTimeout(() => setShowMenu(true), 420);
   };
-  const onTouchEnd = () => clearTimeout(longPressTimer.current);
+  
+  const onTouchEnd = () => {
+    clearTimeout(longPressTimer.current);
+  };
 
   const handleDelete = async () => {
     setShowDeleteModal(false);
@@ -68,7 +137,10 @@ export const Message = ({
       if (selectedChatPartner) await deletePrivateMessage(chatId, message.id);
       else await deleteMessage(message.id);
     } catch (e) { console.error('Delete failed', e); }
-    finally { setIsDeleting(false); setShowMenu(false); }
+    finally { 
+      setIsDeleting(false); 
+      setShowMenu(false); 
+    }
   };
 
   return (
@@ -103,8 +175,8 @@ export const Message = ({
               ${isDeleting ? 'opacity-40' : ''}
               transition-opacity duration-200 select-none
             `}
-            onMouseEnter={() => isMyMessage && setShowMenu(true)}
-            onMouseLeave={() => setShowMenu(false)}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
             onTouchMove={onTouchEnd}
@@ -124,22 +196,32 @@ export const Message = ({
               )}
             </div>
 
-            {/* Delete button */}
+            {/* Delete button - Now with its own hover area */}
             {isMyMessage && showMenu && !isDeleting && (
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowDeleteModal(true); }}
+              <div
+                ref={menuRef}
                 className={`
                   absolute -top-3 ${isMyMessage ? '-left-8' : '-right-8'}
-                  w-7 h-7 rounded-full bg-[#1a1a20] border border-white/10
-                  flex items-center justify-center
-                  text-[#9999b0] hover:text-red-400 hover:border-red-500/30
-                  shadow-lg transition-all duration-150 animate-pop-in
+                  w-7 h-7
                 `}
+                onMouseEnter={handleButtonMouseEnter}
+                onMouseLeave={handleButtonMouseLeave}
               >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                </svg>
-              </button>
+                <button
+                  ref={buttonRef}
+                  onClick={(e) => { e.stopPropagation(); setShowDeleteModal(true); }}
+                  className={`
+                    w-full h-full rounded-full bg-[#1a1a20] border border-white/10
+                    flex items-center justify-center
+                    text-[#9999b0] hover:text-red-400 hover:border-red-500/30
+                    shadow-lg transition-all duration-150 animate-pop-in
+                  `}
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                  </svg>
+                </button>
+              </div>
             )}
 
             {isDeleting && (
