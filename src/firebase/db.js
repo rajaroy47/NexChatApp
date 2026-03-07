@@ -43,6 +43,8 @@ export const sendMessage = (uid, displayName, message) => {
     });
 };
 
+
+/*
 export const sendPrivateMessage = (senderUid, senderDisplayName, receiverUid, message) => {
     if (!message.trim() || !senderUid || !receiverUid) return;
     const chatId = getChatId(senderUid, receiverUid);
@@ -64,6 +66,27 @@ export const sendPrivateMessage = (senderUid, senderDisplayName, receiverUid, me
         status: "sent"
     });
 };
+*/
+
+export const sendPrivateMessage = (senderUid, senderDisplayName, receiverUid, message) => {
+    const text = message.trim();
+    if (!text || !senderUid || !receiverUid) return;
+
+    const chatId = getChatId(senderUid, receiverUid);
+
+    return push(ref(db, `chats/${chatId}/messages`), {
+        message: text,
+        senderUid,
+        senderDisplayName,
+        timestamp: Date.now(),
+        status: "sent"
+    });
+};
+
+
+
+
+
 
 
 export const saveUserInfo = (uid, email, displayName) => {
