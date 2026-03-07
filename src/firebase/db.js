@@ -47,13 +47,24 @@ export const sendPrivateMessage = (senderUid, senderDisplayName, receiverUid, me
     if (!message.trim() || !senderUid || !receiverUid) return;
     const chatId = getChatId(senderUid, receiverUid);
 
+    // this is old code -------
+    // return push(ref(db, `chats/${chatId}/messages`), {
+    //     senderUid,
+    //     senderDisplayName,
+    //     message: message.trim(),
+    //     timestamp: Date.now(),
+    // });
+
+    // new code for support doubule tick and typing indicator ------
     return push(ref(db, `chats/${chatId}/messages`), {
+        message,
         senderUid,
         senderDisplayName,
-        message: message.trim(),
         timestamp: Date.now(),
+        status: "sent"
     });
 };
+
 
 export const saveUserInfo = (uid, email, displayName) => {
     const finalDisplayName = displayName.trim() || getDefaultName(email);
