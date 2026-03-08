@@ -24,11 +24,12 @@ export const ChatInput = ({
 
     const typingTimeoutRef = useRef(null);
 
-    // ── Perfect mobile keyboard handling ─────────────────
+    /* ───────── Mobile Keyboard Handling ───────── */
     useEffect(() => {
         if (!window.visualViewport) return;
 
         const onViewportChange = () => {
+
             const vvHeight = window.visualViewport.height;
             const vvOffsetTop = window.visualViewport.offsetTop;
 
@@ -41,7 +42,8 @@ export const ChatInput = ({
 
             if (bottomOffset > 50) {
                 setTimeout(() => {
-                    document.getElementById('chat-messages-end')
+                    document
+                        .getElementById('chat-messages-end')
                         ?.scrollIntoView({ behavior: 'smooth', block: 'end' });
                 }, 80);
             }
@@ -54,33 +56,34 @@ export const ChatInput = ({
             window.visualViewport.removeEventListener('resize', onViewportChange);
             window.visualViewport.removeEventListener('scroll', onViewportChange);
         };
+
     }, []);
 
-    // ── Emoji select ─────────────────
+    /* ───────── Emoji Select ───────── */
     const handleEmojiSelect = useCallback((emoji) => {
         setInput(prev => prev + emoji);
         setTimeout(() => inputRef.current?.focus(), 0);
     }, [setInput]);
 
-    // ── Handle typing status ─────────────────
+    /* ───────── Typing Status ───────── */
     const handleTyping = (value) => {
 
         if (!currentUser || !selectedChatPartner) return;
 
         setTypingStatus(currentUser.uid, selectedChatPartner.uid, value.length > 0);
 
-        if (typingTimeoutRef.current) {
-            clearTimeout(typingTimeoutRef.current);
-        }
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
         typingTimeoutRef.current = setTimeout(() => {
             setTypingStatus(currentUser.uid, selectedChatPartner.uid, false);
         }, 2000);
     };
 
-    // ── Send on enter ─────────────────
+    /* ───────── Enter Send ───────── */
     const handleKeyDown = (e) => {
+
         if (e.key === 'Enter' && !e.shiftKey) {
+
             e.preventDefault();
             handleSend(e);
 
@@ -90,9 +93,11 @@ export const ChatInput = ({
         }
     };
 
-    // ── Close emoji picker outside click ─────────────────
+    /* ───────── Close Emoji Picker ───────── */
     useEffect(() => {
+
         const handleClickOutside = (e) => {
+
             if (formRef.current && !formRef.current.contains(e.target)) {
                 setShowEmojiPicker(false);
             }
@@ -100,7 +105,9 @@ export const ChatInput = ({
 
         document.addEventListener('mousedown', handleClickOutside);
 
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+        return () =>
+            document.removeEventListener('mousedown', handleClickOutside);
+
     }, [setShowEmojiPicker]);
 
     const isVerified = currentUser?.emailVerified;
@@ -118,20 +125,40 @@ export const ChatInput = ({
             : 'Message everyone…';
 
     const bottomStyle = visualViewportHeight
-        ? { bottom: visualViewportHeight.bottom, position: 'fixed', left: 0, right: 0, zIndex: 100 }
+        ? {
+            bottom: visualViewportHeight.bottom,
+            position: 'fixed',
+            left: 0,
+            right: 0,
+            zIndex: 100
+        }
         : {};
 
     return (
         <>
+            {/* ───────── Emoji Picker ───────── */}
             {showEmojiPicker && (
                 <div
                     style={visualViewportHeight
-                        ? { position: 'fixed', bottom: (visualViewportHeight.bottom + 64), left: 0, right: 0, zIndex: 110 }
-                        : { position: 'absolute', bottom: '100%', left: 0, right: 0, zIndex: 110, marginBottom: 8 }
+                        ? {
+                            position: 'fixed',
+                            bottom: visualViewportHeight.bottom + 70,
+                            left: 0,
+                            right: 0,
+                            zIndex: 110
+                        }
+                        : {
+                            position: 'absolute',
+                            bottom: '100%',
+                            left: 0,
+                            right: 0,
+                            zIndex: 110,
+                            marginBottom: 8
+                        }
                     }
-                    className="px-3"
+                    className="px-2 sm:px-3"
                 >
-                    <div className="max-w-lg mx-auto">
+                    <div className="max-w-md sm:max-w-lg mx-auto">
                         <EmojiPicker
                             onEmojiSelect={handleEmojiSelect}
                             onClose={() => setShowEmojiPicker(false)}
@@ -140,12 +167,14 @@ export const ChatInput = ({
                 </div>
             )}
 
+            {/* ───────── Input Bar ───────── */}
             <div
                 ref={wrapperRef}
-                className="nexchat-input-bar"
+                className="nexchat-input-bar w-full max-w-full"
                 style={bottomStyle}
             >
 
+                {/* Verify Notice */}
                 {currentUser && !isVerified && (
                     <div className="px-3 pt-2">
                         <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
@@ -157,6 +186,7 @@ export const ChatInput = ({
                     </div>
                 )}
 
+                {/* Display Name Notice */}
                 {needsDisplayName && (
                     <div className="px-3 pt-2">
                         <button
@@ -171,6 +201,7 @@ export const ChatInput = ({
                     </div>
                 )}
 
+                {/* ───────── Input Form ───────── */}
                 <form
                     ref={formRef}
                     onSubmit={(e) => {
@@ -180,8 +211,9 @@ export const ChatInput = ({
                         if (currentUser && selectedChatPartner) {
                             setTypingStatus(currentUser.uid, selectedChatPartner.uid, false);
                         }
+
                     }}
-                    className="flex items-end gap-2 px-3 py-2.5"
+                    className="flex items-end gap-2 px-2 sm:px-3 py-2.5"
                 >
 
                     {/* Emoji Button */}
@@ -189,13 +221,13 @@ export const ChatInput = ({
                         type="button"
                         onClick={() => setShowEmojiPicker(p => !p)}
                         disabled={!isVerified}
-                        className="nexchat-icon-btn flex-shrink-0 mb-0.5 text-gray-400 hover:text-gray-200"
+                        className="nexchat-icon-btn flex-shrink-0 mb-0.5 text-gray-400 hover:text-gray-200 text-lg"
                     >
                         🙂
                     </button>
 
-                    {/* Input */}
-                    <div className="flex-1 relative flex items-center bg-[#1E1E1E] rounded-3xl border border-white/[0.06]">
+                    {/* Input Box */}
+                    <div className="flex-1 min-w-0 relative flex items-center bg-[#1E1E1E] rounded-3xl border border-white/[0.06]">
 
                         <input
                             ref={inputRef}
@@ -204,10 +236,9 @@ export const ChatInput = ({
                             onChange={(e) => {
 
                                 const value = e.target.value;
-
                                 setInput(value);
-
                                 handleTyping(value);
+
                             }}
                             onKeyDown={handleKeyDown}
                             onFocus={() => setIsFocused(true)}
@@ -218,13 +249,14 @@ export const ChatInput = ({
                                 if (currentUser && selectedChatPartner) {
                                     setTypingStatus(currentUser.uid, selectedChatPartner.uid, false);
                                 }
+
                             }}
                             placeholder={placeholder}
                             disabled={!isVerified}
                             autoComplete="off"
                             enterKeyHint="send"
                             style={{ fontSize: '16px' }}
-                            className="flex-1 bg-transparent text-white px-4 py-2.5 focus:outline-none"
+                            className="flex-1 min-w-0 bg-transparent text-white px-3 sm:px-4 py-2.5 focus:outline-none text-sm sm:text-base"
                         />
 
                         {input.length > 0 && (
@@ -232,6 +264,7 @@ export const ChatInput = ({
                                 {input.length}
                             </span>
                         )}
+
                     </div>
 
                     {/* Send Button */}
@@ -239,7 +272,7 @@ export const ChatInput = ({
                         <button
                             type="submit"
                             disabled={isDisabled}
-                            className="nexchat-send-btn flex-shrink-0 mb-0.5"
+                            className="nexchat-send-btn flex-shrink-0 mb-0.5 text-lg"
                         >
                             ➤
                         </button>
@@ -247,6 +280,7 @@ export const ChatInput = ({
 
                 </form>
 
+                {/* iPhone Safe Area */}
                 <div style={{ height: 'env(safe-area-inset-bottom, 0px)' }} />
 
             </div>
