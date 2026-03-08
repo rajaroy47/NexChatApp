@@ -290,7 +290,7 @@ return (
         <main
             ref={containerRef}
             onScroll={handleScroll}
-            className="flex-1 overflow-y-auto overflow-x-hidden nexchat-scrollbar"
+            className="flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-4 py-4 space-y-3 scroll-smooth nexchat-scrollbar"
             style={{
                 paddingBottom: inputBarH,
                 WebkitOverflowScrolling: 'touch',
