@@ -76,7 +76,8 @@ export const ChatPage = ({ currentUser }) => {
     : `${allRegisteredUsers.filter(u => u.state === 'online').length} online`;
 
   return (
-    <div className="flex h-screen w-screen bg-[#060608] overflow-hidden">
+    // <div className="flex h-screen w-screen bg-[#060608] overfl
+    <div className="flex h-[100dvh] w-screen bg-[#060608] overflow-hidden">
       {showSettingsModal && (
         <SettingsModal
           currentUser={currentUser}
@@ -98,7 +99,8 @@ export const ChatPage = ({ currentUser }) => {
         onLogout={handleLogout}
       />
 
-      <div className="flex-1 flex flex-col min-w-0 w-full">
+      {/* <div className="flex-1 flex flex-col min-w-0 w-full"> */}
+      <div className="flex-1 flex flex-col min-w-0 w-full h-full overflow-hidden">
         {/* Header */}
         <header className="flex items-center gap-3 px-4 py-3 bg-[#0e0e12]/95 backdrop-blur-xl border-b border-white/[0.05] sticky top-0 z-20">
           {/* Mobile menu btn */}
