@@ -86,6 +86,7 @@ export const ChatInput = ({
 
             e.preventDefault();
             handleSend(e);
+            inputRef.current?.focus(); 
 
             if (currentUser && selectedChatPartner) {
                 setTypingStatus(currentUser.uid, selectedChatPartner.uid, false);
