@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import EmojiPicker from '../common/EmojiPicker';
-import { setTypingStatus } from "../../firebase/db";
+import { setTypingStatus, getChatId } from "../../firebase/db";
 
 export const ChatInput = ({ 
     input, 
@@ -24,8 +24,14 @@ export const ChatInput = ({
 
     const typingTimeoutRef = useRef(null);
 
+    /* Generate Chat ID */
+    const chatId = currentUser && selectedChatPartner
+        ? getChatId(currentUser.uid, selectedChatPartner.uid)
+        : null;
+
     /* ───────── Mobile Keyboard Handling ───────── */
     useEffect(() => {
+
         if (!window.visualViewport) return;
 
         const onViewportChange = () => {
@@ -61,21 +67,23 @@ export const ChatInput = ({
 
     /* ───────── Emoji Select ───────── */
     const handleEmojiSelect = useCallback((emoji) => {
+
         setInput(prev => prev + emoji);
         setTimeout(() => inputRef.current?.focus(), 0);
+
     }, [setInput]);
 
     /* ───────── Typing Status ───────── */
     const handleTyping = (value) => {
 
-        if (!currentUser || !selectedChatPartner) return;
+        if (!chatId || !currentUser) return;
 
-        setTypingStatus(currentUser.uid, selectedChatPartner.uid, value.length > 0);
+        setTypingStatus(chatId, currentUser.uid, value.length > 0);
 
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
         typingTimeoutRef.current = setTimeout(() => {
-            setTypingStatus(currentUser.uid, selectedChatPartner.uid, false);
+            setTypingStatus(chatId, currentUser.uid, false);
         }, 2000);
     };
 
@@ -85,12 +93,18 @@ export const ChatInput = ({
         if (e.key === 'Enter' && !e.shiftKey) {
 
             e.preventDefault();
-            handleSend(e);
-            inputRef.current?.focus(); 
 
-            if (currentUser && selectedChatPartner) {
-                setTypingStatus(currentUser.uid, selectedChatPartner.uid, false);
+            handleSend(e);
+
+            setInput("");
+
+            if (chatId && currentUser) {
+                setTypingStatus(chatId, currentUser.uid, false);
             }
+
+            setTimeout(() => {
+                inputRef.current?.focus();
+            }, 10);
         }
     };
 
@@ -120,7 +134,7 @@ export const ChatInput = ({
         isVerified;
 
     const placeholder = !isVerified
-        ? '✉️ Verify your email to chat...'
+        ? 'Verify your email to chat...'
         : selectedChatPartner
             ? `Message ${selectedChatPartner.displayName}…`
             : 'Message everyone…';
@@ -137,7 +151,6 @@ export const ChatInput = ({
 
     return (
         <>
-            {/* ───────── Emoji Picker ───────── */}
             {showEmojiPicker && (
                 <div
                     style={visualViewportHeight
@@ -168,56 +181,34 @@ export const ChatInput = ({
                 </div>
             )}
 
-            {/* ───────── Input Bar ───────── */}
             <div
                 ref={wrapperRef}
                 className="nexchat-input-bar w-full max-w-full"
                 style={bottomStyle}
             >
 
-                {/* Verify Notice */}
-                {currentUser && !isVerified && (
-                    <div className="px-3 pt-2">
-                        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse flex-shrink-0" />
-                            <p className="text-xs text-amber-400 flex-1">
-                                Verify your email to start chatting
-                            </p>
-                        </div>
-                    </div>
-                )}
-
-                {/* Display Name Notice */}
-                {needsDisplayName && (
-                    <div className="px-3 pt-2">
-                        <button
-                            onClick={() => setShowSettingsModal?.(true)}
-                            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-violet-500/10 border border-violet-500/20"
-                        >
-                            <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse flex-shrink-0" />
-                            <p className="text-xs text-violet-400 flex-1 text-left">
-                                Set your display name to send messages
-                            </p>
-                        </button>
-                    </div>
-                )}
-
-                {/* ───────── Input Form ───────── */}
                 <form
                     ref={formRef}
                     onSubmit={(e) => {
 
+                        e.preventDefault();
+
                         handleSend(e);
 
-                        if (currentUser && selectedChatPartner) {
-                            setTypingStatus(currentUser.uid, selectedChatPartner.uid, false);
+                        setInput("");
+
+                        if (chatId && currentUser) {
+                            setTypingStatus(chatId, currentUser.uid, false);
                         }
+
+                        setTimeout(() => {
+                            inputRef.current?.focus();
+                        }, 10);
 
                     }}
                     className="flex items-end gap-2 px-2 sm:px-3 py-2.5"
                 >
 
-                    {/* Emoji Button */}
                     <button
                         type="button"
                         onClick={() => setShowEmojiPicker(p => !p)}
@@ -227,12 +218,12 @@ export const ChatInput = ({
                         🙂
                     </button>
 
-                    {/* Input Box */}
                     <div className="flex-1 min-w-0 relative flex items-center bg-[#1E1E1E] rounded-3xl border border-white/[0.06]">
 
                         <input
                             ref={inputRef}
                             type="text"
+                            name="message"
                             value={input}
                             onChange={(e) => {
 
@@ -247,14 +238,18 @@ export const ChatInput = ({
 
                                 setIsFocused(false);
 
-                                if (currentUser && selectedChatPartner) {
-                                    setTypingStatus(currentUser.uid, selectedChatPartner.uid, false);
+                                if (chatId && currentUser) {
+                                    setTypingStatus(chatId, currentUser.uid, false);
                                 }
 
                             }}
                             placeholder={placeholder}
                             disabled={!isVerified}
                             autoComplete="off"
+                            autoCorrect="off"
+                            autoCapitalize="off"
+                            spellCheck="false"
+                            inputMode="text"
                             enterKeyHint="send"
                             style={{ fontSize: '16px' }}
                             className="flex-1 min-w-0 bg-transparent text-white px-3 sm:px-4 py-2.5 focus:outline-none text-sm sm:text-base"
@@ -268,7 +263,6 @@ export const ChatInput = ({
 
                     </div>
 
-                    {/* Send Button */}
                     {input.trim() && (
                         <button
                             type="submit"
@@ -281,7 +275,6 @@ export const ChatInput = ({
 
                 </form>
 
-                {/* iPhone Safe Area */}
                 <div style={{ height: 'env(safe-area-inset-bottom, 0px)' }} />
 
             </div>
