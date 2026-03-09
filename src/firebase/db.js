@@ -135,7 +135,6 @@
 // };
 
 
-
 import {
     ref,
     push,
@@ -149,9 +148,12 @@ import {
 import { db } from "./config";
 
 
+// =========================
+// GENERATE CHAT ID
+// =========================
 
-// generate chat id
 export const getChatId = (uid1, uid2) => {
+    if (!uid1 || !uid2) return null;
     return uid1 < uid2 ? `${uid1}_${uid2}` : `${uid2}_${uid1}`;
 };
 
@@ -164,6 +166,7 @@ export const getDefaultName = (email) =>
 // =========================
 
 export const updateOnlineStatus = (uid, email, isOnline) => {
+
     if (!uid || !email) return;
 
     const statusRef = ref(db, `status/${uid}`);
@@ -177,12 +180,15 @@ export const updateOnlineStatus = (uid, email, isOnline) => {
     set(statusRef, statusData);
 
     if (isOnline) {
+
         onDisconnect(statusRef).set({
             email,
             state: "offline",
             lastChanged: serverTimestamp(),
         });
+
     }
+
 };
 
 
@@ -191,7 +197,9 @@ export const updateOnlineStatus = (uid, email, isOnline) => {
 // =========================
 
 export const sendMessage = (uid, displayName, message) => {
-    const text = message.trim();
+
+    const text = message?.trim();
+
     if (!displayName || !text) return;
 
     return push(ref(db, "messages"), {
@@ -201,6 +209,7 @@ export const sendMessage = (uid, displayName, message) => {
         timestamp: Date.now(),
         status: "sent"
     });
+
 };
 
 
@@ -215,7 +224,7 @@ export const sendPrivateMessage = (
     message
 ) => {
 
-    const text = message.trim();
+    const text = message?.trim();
 
     if (!text || !senderUid || !receiverUid) return;
 
@@ -228,6 +237,7 @@ export const sendPrivateMessage = (
         timestamp: Date.now(),
         status: "sent"
     });
+
 };
 
 
@@ -243,7 +253,7 @@ export const markMessageDelivered = (chatId, messageId) => {
 
     const messageRef = ref(db, `chats/${chatId}/messages/${messageId}`);
 
-    update(messageRef, {
+    return update(messageRef, {
         status: "delivered"
     });
 
@@ -257,7 +267,7 @@ export const markMessageRead = (chatId, messageId) => {
 
     const messageRef = ref(db, `chats/${chatId}/messages/${messageId}`);
 
-    update(messageRef, {
+    return update(messageRef, {
         status: "read"
     });
 
@@ -269,15 +279,23 @@ export const markMessageRead = (chatId, messageId) => {
 // TYPING INDICATOR
 // =========================
 
-
 export const setTypingStatus = (chatId, uid, isTyping) => {
+
+    if (!chatId || !uid) return;
 
     const typingRef = ref(db, `typing/${chatId}/${uid}`);
 
     if (isTyping) {
+
         set(typingRef, true);
+
+        // auto remove if user disconnect
+        onDisconnect(typingRef).remove();
+
     } else {
+
         remove(typingRef);
+
     }
 
 };
@@ -288,11 +306,12 @@ export const setTypingStatus = (chatId, uid, isTyping) => {
 // USER INFO
 // =========================
 
-
 export const saveUserInfo = (uid, email, displayName) => {
 
+    if (!uid || !email) return;
+
     const finalDisplayName =
-        displayName.trim() || getDefaultName(email);
+        displayName?.trim() || getDefaultName(email);
 
     return set(ref(db, `users/${uid}`), {
         email,
@@ -305,7 +324,7 @@ export const saveUserInfo = (uid, email, displayName) => {
 
 export const updateDisplayName = (uid, newDisplayName) => {
 
-    if (!uid || !newDisplayName.trim())
+    if (!uid || !newDisplayName?.trim())
         return Promise.reject(new Error("Invalid display name"));
 
     return update(ref(db, `users/${uid}`), {
@@ -319,7 +338,6 @@ export const updateDisplayName = (uid, newDisplayName) => {
 // =========================
 // DELETE MESSAGE
 // =========================
-
 
 export const deleteMessage = (messageId) => {
 
@@ -339,4 +357,3 @@ export const deletePrivateMessage = (chatId, messageId) => {
     return remove(ref(db, `chats/${chatId}/messages/${messageId}`));
 
 };
-
